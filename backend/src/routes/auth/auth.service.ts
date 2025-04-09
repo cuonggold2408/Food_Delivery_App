@@ -1,58 +1,156 @@
 import {
   Injectable,
   BadRequestException,
-  UnauthorizedException,
   UnprocessableEntityException,
+  UnauthorizedException,
+  // UnauthorizedException,
+  // UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from 'src/database/entities/user.entity';
 import { AuthProvider } from 'src/database/entities/auth-provider.entity';
-import { LoginBodyDTO, RegisterBodyDTO } from 'src/routes/auth/auth.dto';
 import { TokenService } from 'src/shared/services/token.service';
 import { HashingService } from 'src/shared/services/hashing.service';
+import {
+  LoginBodyType,
+  RefreshTokenBodyType,
+  RegisterBodyType,
+  SendOTPBodyType,
+} from 'src/routes/auth/auth.model';
+import { AuthRepository } from 'src/routes/auth/auth.repo';
+import { SharedUserRepository } from 'src/shared/repositories/shared-user.repo';
+import { generateOTP } from 'src/shared/helpers';
+import { addMilliseconds } from 'date-fns';
+import envConfig from 'src/shared/config';
+import ms, { StringValue } from 'ms';
+import { TypeVerificationCode } from 'src/database/entities/verification-code.entity';
+import { EmailService } from 'src/shared/services/email.service';
+import { AccessTokenPayloadCreate } from 'src/shared/types/jwt.type';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
     @InjectRepository(AuthProvider)
     private readonly authProviderRepository: Repository<AuthProvider>,
     private readonly tokenService: TokenService,
     private readonly hashingService: HashingService,
+    private readonly authRepository: AuthRepository,
+    private readonly sharedUserRepository: SharedUserRepository,
+    private readonly emailService: EmailService,
   ) {}
 
-  async register(body: RegisterBodyDTO) {
-    const { email, password, name } = body;
+  async register(body: RegisterBodyType) {
+    const { email, password, name, code } = body;
+    console.log('email: ', email);
+    console.log('code: ', code);
+    console.log('type: ', TypeVerificationCode.REGISTER);
 
-    if (!email || !password || !name) {
-      throw new BadRequestException('Không được để trống thông tin');
+    const verificationCode =
+      await this.authRepository.findUniqueVerificationCode({
+        email,
+        code,
+        type: TypeVerificationCode.REGISTER,
+      });
+
+    console.log('verificationCode: ', verificationCode);
+
+    if (!verificationCode) {
+      throw new UnprocessableEntityException([
+        {
+          field: 'code',
+          message: 'Mã OTP không hợp lệ',
+        },
+      ]);
     }
-    const existingUser = await this.userRepository.findOne({
-      where: { email: body.email },
-    });
-    if (existingUser) throw new BadRequestException('Email đã tồn tại');
 
-    const hashedPassword = await this.hashingService.hash(body.password);
-    const newUser = this.userRepository.create({
-      email: body.email,
-      name: body.name,
-      password: hashedPassword,
-      user_role: 'customer',
-    });
-    return await this.userRepository.save(newUser);
+    if (verificationCode.expires_at < new Date()) {
+      throw new UnprocessableEntityException([
+        {
+          field: 'code',
+          message: 'Mã OTP đã hết hạn',
+        },
+      ]);
+    }
+
+    const hashedPassword = await this.hashingService.hash(password);
+    try {
+      return await this.authRepository.createUser({
+        email,
+        password: hashedPassword,
+        name,
+      });
+    } catch (error) {
+      if (error.code === '23505') {
+        throw new UnprocessableEntityException([
+          {
+            field: 'email',
+            message: 'Email đã tồn tại',
+          },
+        ]);
+      }
+
+      throw new BadRequestException(error.message);
+    }
   }
 
-  async login(body: LoginBodyDTO) {
-    const user = await this.userRepository.findOne({
-      where: {
-        email: body.email,
-      },
+  async sendOTP(body: SendOTPBodyType) {
+    // Kiểm tra xem email đã tồn tại trong cơ sở dữ liệu hay chưa
+    const user = await this.sharedUserRepository.findUnique({
+      email: body.email,
+    });
+    if (user) {
+      throw new UnprocessableEntityException([
+        {
+          field: 'email',
+          message: 'Email đã tồn tại',
+        },
+      ]);
+    }
+
+    // Tạo mã OTP
+    const code = generateOTP();
+
+    await this.authRepository.createVerificationCode({
+      email: body.email,
+      code,
+      expires_at: addMilliseconds(
+        new Date(),
+        ms(envConfig.OTP_EXPIRES_IN as StringValue),
+      ),
+      type: body.type,
+    });
+
+    const { error } = await this.emailService.sendOTP({
+      email: body.email,
+      code,
+    });
+
+    if (error) {
+      throw new UnprocessableEntityException([
+        {
+          field: 'code',
+          message: 'Gửi mã OTP thất bại',
+        },
+      ]);
+    }
+
+    return {
+      message: 'Gửi mã OTP thành công',
+    };
+  }
+
+  async login(body: LoginBodyType) {
+    const user = await this.sharedUserRepository.findUnique({
+      email: body.email,
     });
 
     if (!user) {
-      throw new UnauthorizedException('Tài khoản không tồn tại');
+      throw new UnprocessableEntityException([
+        {
+          field: 'email',
+          message: 'Email không tồn tại',
+        },
+      ]);
     }
 
     const checkPassword = await this.hashingService.compare(
@@ -68,32 +166,85 @@ export class AuthService {
         },
       ]);
     }
-    const tokens = await this.generateTokens(
-      { userId: user.user_id },
-      body.provider_name,
-    );
-    return tokens;
+    const tokens = await this.generateTokens({
+      user_id: user.user_id,
+      provider_name: body.provider_name,
+    });
+
+    const cleanUser = {
+      ...user,
+      password: undefined,
+      user_id: undefined,
+      created_at: undefined,
+      updated_at: undefined,
+    };
+    return { ...tokens, user: cleanUser };
   }
 
-  async generateTokens(payload: { userId: number }, provider_name?: string) {
+  async generateTokens({ user_id, provider_name }: AccessTokenPayloadCreate) {
     const [accessToken, refreshToken] = await Promise.all([
-      this.tokenService.signAccessToken(payload),
-      this.tokenService.signRefreshToken(payload),
+      this.tokenService.signAccessToken({ user_id, provider_name }),
+      this.tokenService.signRefreshToken({ user_id }),
     ]);
 
     const decodedRefreshToken =
       await this.tokenService.verifyRefreshToken(refreshToken);
-    const actualProviderName = provider_name || 'original';
-    await this.authProviderRepository.upsert(
-      {
-        user_id: payload.userId,
-        provider_name: actualProviderName,
-        refresh_token: refreshToken,
-        expired_at: new Date(decodedRefreshToken.exp * 1000),
-      },
-      ['user_id', 'provider_name'], // Dựa trên user_id và provider_name để upsert
-    );
+    const actualProviderName = provider_name || 'local';
+    await this.authRepository.createRefreshToken({
+      user_id: user_id,
+      provider_name: actualProviderName,
+      refresh_token: refreshToken,
+      expired_at: new Date(decodedRefreshToken.exp * 1000),
+    });
 
     return { accessToken, refreshToken };
+  }
+
+  async refreshToken({ refresh_token }: RefreshTokenBodyType) {
+    // 1. Kiểm tra refresh token có hợp lệ hay không
+    const { user_id } =
+      await this.tokenService.verifyRefreshToken(refresh_token);
+
+    // 2. Kiểm tra refresh token có tồn tại trong cơ sở dữ liệu hay không
+    const refreshTokenInDB = await this.authRepository.findUniqueRefreshToken({
+      refresh_token,
+      user_id,
+    });
+
+    if (!refreshTokenInDB) {
+      throw new UnauthorizedException('Refresh token không tồn tại');
+    }
+    try {
+      // 3. Xóa refresh token cũ
+      await this.authRepository.deleteRefreshToken({
+        refresh_token,
+      });
+
+      // 4. Tạo mới access token và refresh token
+      return await this.generateTokens({
+        user_id,
+        provider_name: refreshTokenInDB.provider_name,
+      });
+    } catch {
+      throw new UnauthorizedException('Refresh token không hợp lệ');
+    }
+  }
+
+  async logout({ refresh_token }: { refresh_token: string }) {
+    try {
+      // 1. Kiểm tra refresh token có hợp lệ hay không
+      await this.tokenService.verifyRefreshToken(refresh_token);
+
+      // 2. Xóa refresh token trong cơ sở dữ liệu
+      await this.authRepository.deleteRefreshToken({
+        refresh_token,
+      });
+
+      return {
+        message: 'Đăng xuất thành công',
+      };
+    } catch {
+      throw new BadRequestException('Có lỗi xảy ra khi đăng xuất');
+    }
   }
 }
