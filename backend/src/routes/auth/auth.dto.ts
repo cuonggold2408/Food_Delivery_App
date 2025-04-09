@@ -1,62 +1,26 @@
-import { Exclude } from 'class-transformer';
-import { IsOptional, IsString } from 'class-validator';
-import { Match } from 'src/shared/decorators/custom-validator.decorators';
+import { createZodDto } from 'nestjs-zod';
+import {
+  LoginBodySchema,
+  LoginResponseSchema,
+  LogoutBodySchema,
+  RefreshTokenBodySchema,
+  RefreshTokenResponseSchema,
+  RegisterBodySchema,
+  RegisterResponseSchema,
+  SendOTPBodySchema,
+} from 'src/routes/auth/auth.model';
 
-export class LoginBodyDTO {
-  constructor() {
-    this.provider_name = 'original';
-  }
-  @IsString()
-  email: string;
+export class RegisterBodyDTO extends createZodDto(RegisterBodySchema) {}
+export class RegisterResponseDTO extends createZodDto(RegisterResponseSchema) {}
 
-  @IsString()
-  password: string;
+export class SendOTPBodyDTO extends createZodDto(SendOTPBodySchema) {}
 
-  @IsOptional()
-  @IsString()
-  provider_name?: string; // 'original' hoặc 'google'
+export class LoginBodyDTO extends createZodDto(LoginBodySchema) {}
+export class LoginResponseDTO extends createZodDto(LoginResponseSchema) {}
 
-  @IsOptional()
-  @IsString()
-  provider_user_id?: string; // Chỉ dùng cho Google
+export class RefreshTokenBodyDTO extends createZodDto(RefreshTokenBodySchema) {}
+export class RefreshTokenResponseDTO extends createZodDto(
+  RefreshTokenResponseSchema,
+) {}
 
-  @IsOptional()
-  @IsString()
-  access_token?: string; // Chỉ dùng cho Google
-}
-
-export class RegisterBodyDTO extends LoginBodyDTO {
-  @IsString()
-  name: string;
-
-  @IsString()
-  @Match('password', { message: 'Mật khẩu không khớp' })
-  confirmPassword: string;
-}
-
-export class RegisterResponseDTO {
-  id: number;
-  email: string;
-  name: string;
-  @Exclude() password: string;
-
-  constructor(partial: Partial<RegisterResponseDTO>) {
-    Object.assign(this, partial);
-  }
-}
-
-export class LoginResponseDTO {
-  accessToken: string;
-  refreshToken: string;
-
-  constructor(partial: Partial<LoginResponseDTO>) {
-    Object.assign(this, partial);
-  }
-}
-
-export class RefreshTokenBodyDTO {
-  @IsString()
-  refreshToken: string;
-}
-
-export class RefreshTokenResponseDTO extends LoginResponseDTO {}
+export class LogoutBodyDTO extends createZodDto(LogoutBodySchema) {}
