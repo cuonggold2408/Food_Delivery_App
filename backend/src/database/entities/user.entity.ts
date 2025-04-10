@@ -1,4 +1,5 @@
 import { AuthProvider } from 'src/database/entities/auth-provider.entity';
+import { UserAddress } from 'src/database/entities/user-address.entity';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('users')
@@ -30,4 +31,7 @@ export class User {
 
   @OneToMany(() => AuthProvider, (authProvider) => authProvider.user)
   auth_providers: AuthProvider[];
+
+  @OneToMany(() => UserAddress, (UserAddress) => UserAddress.user)
+  user_address: UserAddress[];
 }
