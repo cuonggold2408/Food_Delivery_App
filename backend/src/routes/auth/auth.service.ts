@@ -6,9 +6,6 @@ import {
   // UnauthorizedException,
   // UnprocessableEntityException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { AuthProvider } from 'src/database/entities/auth-provider.entity';
 import { TokenService } from 'src/shared/services/token.service';
 import { HashingService } from 'src/shared/services/hashing.service';
 import {
@@ -30,8 +27,6 @@ import { AccessTokenPayloadCreate } from 'src/shared/types/jwt.type';
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(AuthProvider)
-    private readonly authProviderRepository: Repository<AuthProvider>,
     private readonly tokenService: TokenService,
     private readonly hashingService: HashingService,
     private readonly authRepository: AuthRepository,
@@ -41,9 +36,6 @@ export class AuthService {
 
   async register(body: RegisterBodyType) {
     const { email, password, name, code } = body;
-    console.log('email: ', email);
-    console.log('code: ', code);
-    console.log('type: ', TypeVerificationCode.REGISTER);
 
     const verificationCode =
       await this.authRepository.findUniqueVerificationCode({
@@ -51,8 +43,6 @@ export class AuthService {
         code,
         type: TypeVerificationCode.REGISTER,
       });
-
-    console.log('verificationCode: ', verificationCode);
 
     if (!verificationCode) {
       throw new UnprocessableEntityException([

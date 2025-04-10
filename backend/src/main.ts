@@ -1,10 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ResponseInterceptor } from 'src/shared/interceptors/response.interceptor';
+import { SeedService } from 'src/shared/services/seed.service';
 // import { UnprocessableEntityException, ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const seedService = app.get(SeedService);
+  await seedService.importData();
 
   // app.useGlobalPipes(
   //   new ValidationPipe({
