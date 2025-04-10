@@ -9,15 +9,19 @@ import CustomZodValidationPipe from 'src/shared/pipes/custom-zod-validation.pipe
 import { ZodSerializerInterceptor } from 'nestjs-zod';
 import { HttpExceptionFilter } from 'src/shared/filters/http-exception.filter';
 import { AuthModule } from 'src/routes/auth/auth.module';
+import { UserModule } from './routes/user/user.module';
+import { ProductModule } from './routes/product/product.module';
 
 @Module({
   imports: [
     SharedModule,
     DatabaseModule,
     AuthModule,
+    UserModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ProductModule,
   ],
   controllers: [AppController],
   providers: [
