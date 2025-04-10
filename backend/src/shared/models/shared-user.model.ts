@@ -28,3 +28,20 @@ export const AuthProviderSchema = z.object({
   updated_at: z.date(),
 });
 export type AuthProviderType = z.infer<typeof AuthProviderSchema>;
+
+export const UserAddressSchema = z.object({
+  address_id: z.number(),
+  user_id: z.number(),
+  address_name: z.string().max(100),
+  phone_number: z.string().max(20),
+  recipient_name: z.string().max(100),
+  street_address: z.string().max(255),
+  postal_code: z.string().max(20),
+  apartment: z.string().max(100).optional(),
+  is_default: z.boolean().default(false),
+  latitude: z.number(),
+  longitude: z.number(),
+  created_at: z.date(),
+  updated_at: z.date(),
+});
+export type UserAddressType = z.infer<typeof UserAddressSchema>;
