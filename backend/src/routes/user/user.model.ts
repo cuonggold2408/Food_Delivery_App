@@ -10,7 +10,7 @@ export const UserAddressBodySchema = UserAddressSchema.pick({
   postal_code: true,
   apartment: true,
   is_default: true,
-  // latitude: true,
-  // longitude: true,
+  latitude: true,
+  longitude: true,
 }).strict();
 export type UserAddressBodyType = z.infer<typeof UserAddressBodySchema>;

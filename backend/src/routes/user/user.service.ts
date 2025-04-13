@@ -21,6 +21,8 @@ export class UserService {
       postal_code,
       is_default,
       apartment,
+      latitude,
+      longitude,
     } = body;
 
     // Kiểm tra xem user có tồn tại không
@@ -50,6 +52,8 @@ export class UserService {
       postal_code,
       is_default,
       apartment,
+      latitude,
+      longitude,
     });
 
     return {
@@ -71,5 +75,36 @@ export class UserService {
     const addresses =
       await this.userAddressRepository.findUserAddresses(userId);
     return addresses;
+  }
+
+  async updateAddress(
+    addressId: number,
+    userId: number,
+    body: Omit<UserAddressBodyType, 'user_id'>,
+  ) {
+    // Kiểm tra xem user có tồn tại không
+    const user = await this.userAddressRepository.checkUserExists(userId);
+    if (!user) throw new NotFoundException('Người dùng không tồn tại');
+
+    if (!body.latitude || !body.longitude) {
+      throw new BadRequestException('Cần có latitude và longitude');
+    }
+
+    return await this.userAddressRepository.updateAddressForUser(
+      addressId,
+      userId,
+      body,
+    );
+  }
+
+  async deleteAddress(addressId: number, userId: number) {
+    // Kiểm tra xem user có tồn tại không
+    const user = await this.userAddressRepository.checkUserExists(userId);
+    if (!user) throw new NotFoundException('Người dùng không tồn tại');
+
+    return await this.userAddressRepository.deleteAddressForUser(
+      addressId,
+      userId,
+    );
   }
 }

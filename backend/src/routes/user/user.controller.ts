@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+} from '@nestjs/common';
 import { UserAddressBodyDTO } from 'src/routes/user/user.dto';
 import { UserService } from 'src/routes/user/user.service';
 
@@ -11,7 +19,24 @@ export class UserController {
     return this.userService.saveAddress(body);
   }
 
-  @Get('addresses/:userId')
+  @Put('address/:addressId/:userId')
+  updateAddress(
+    @Param('addressId') addressId: number,
+    @Param('userId') userId: number,
+    @Body() body: Omit<UserAddressBodyDTO, 'user_id'>,
+  ) {
+    return this.userService.updateAddress(addressId, userId, body);
+  }
+
+  @Delete('address/:addressId/:userId')
+  deleteAddress(
+    @Param('addressId') addressId: number,
+    @Param('userId') userId: number,
+  ) {
+    return this.userService.deleteAddress(addressId, userId);
+  }
+
+  @Get('address/:userId')
   getAllAddress(@Param('userId') userId: number) {
     return this.userService.getAllAddress(userId);
   }
