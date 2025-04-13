@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
@@ -25,7 +26,7 @@ const kOrangeColor = Colors.orange;
 const kBackgroundColor = Colors.grey;
 const kMapHeightRatio = 1 / 3; // Tỷ lệ chiều cao bản đồ (1/3 màn hình)
 const kSpacing = 16.0; // Khoảng cách giữa các thành phần
-const kDefaultLatLng = LatLng(40.7128, -74.0060); // Tọa độ mặc định (New York)
+const kDefaultLatLng = LatLng(21.0285, 105.8542); // Tọa độ mặc định (Hà Nội)
 
 class AddAddressScreen extends StatefulWidget {
   const AddAddressScreen({super.key});
@@ -42,11 +43,14 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
   final TextEditingController _streetController = TextEditingController();
   final TextEditingController _postCodeController = TextEditingController();
   final TextEditingController _apartmentController = TextEditingController();
+  Timer? _debounceGeocoding; // Debounce cho geocoding
+  Timer? _debounceCamera; // Debounce cho di chuyển camera
+  Map<LatLng, String> _addressCache = {}; // Cache cho reverse geocoding
 
   @override
   void initState() {
     super.initState();
-    _getCurrentLocation(); // Lấy vị trí hiện tại khi khởi tạo
+    _getCurrentLocation(); // Lấy vị trí thực tế khi khởi tạo
     _addressController.addListener(
       _onAddressChanged,
     ); // Lắng nghe thay đổi địa chỉ
@@ -54,7 +58,10 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
 
   @override
   void dispose() {
+    _debounceGeocoding?.cancel();
+    _debounceCamera?.cancel();
     _mapController?.dispose();
+    _addressController.removeListener(_onAddressChanged);
     _addressController.dispose();
     _streetController.dispose();
     _postCodeController.dispose();
@@ -62,70 +69,139 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
     super.dispose();
   }
 
-  // Lấy vị trí hiện tại của người dùng
+  // Lấy vị trí thực tế của người dùng
   Future<void> _getCurrentLocation() async {
     bool serviceEnabled;
     LocationPermission permission;
 
-    // Kiểm tra xem dịch vụ vị trí có được bật không
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vui lòng bật dịch vụ vị trí')),
+        );
+        _updateAddressFields(_currentPosition);
+      }
       return;
     }
 
-    // Kiểm tra và yêu cầu quyền truy cập vị trí
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Quyền truy cập vị trí bị từ chối')),
+          );
+          _updateAddressFields(_currentPosition);
+        }
         return;
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Quyền truy cập vị trí bị từ chối vĩnh viễn'),
+          ),
+        );
+        _updateAddressFields(_currentPosition);
+      }
       return;
     }
 
-    // Lấy vị trí hiện tại
-    Position position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
-
-    setState(() {
-      _currentPosition = LatLng(position.latitude, position.longitude);
-    });
-
-    // Di chuyển bản đồ đến vị trí hiện tại
-    _mapController?.animateCamera(CameraUpdate.newLatLng(_currentPosition));
-
-    // Cập nhật địa chỉ từ tọa độ
-    _updateAddressFromCoordinates(_currentPosition);
-  }
-
-  // Chuyển địa chỉ thành tọa độ và cập nhật bản đồ
-  Future<void> _onAddressChanged() async {
-    String address = _addressController.text;
-    if (address.isEmpty) return;
-
     try {
-      List<Location> locations = await locationFromAddress(address);
-      if (locations.isNotEmpty) {
-        Location location = locations.first;
-        LatLng newPosition = LatLng(location.latitude, location.longitude);
-        setState(() {
-          _currentPosition = newPosition;
-        });
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
 
-        // Di chuyển bản đồ đến vị trí mới
-        _mapController?.animateCamera(CameraUpdate.newLatLng(newPosition));
+      if (mounted) {
+        setState(() {
+          _currentPosition = LatLng(position.latitude, position.longitude);
+        });
+        _moveCameraToPosition(_currentPosition);
+        _updateAddressFields(_currentPosition);
       }
     } catch (e) {
-      print('Error geocoding address: $e');
+      print('Error getting location: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi khi lấy vị trí: $e')));
+        _updateAddressFields(_currentPosition);
+      }
     }
   }
 
-  // Chuyển tọa độ thành địa chỉ và cập nhật trường Address
-  Future<void> _updateAddressFromCoordinates(LatLng position) async {
+  // Xử lý khi người dùng chạm vào bản đồ
+  void _onMapTapped(LatLng position) {
+    if (mounted) {
+      setState(() {
+        _currentPosition = position;
+      });
+      _moveCameraToPosition(position);
+      _updateAddressFields(position);
+    }
+  }
+
+  // Chuyển địa chỉ thành tọa độ và cập nhật bản đồ (với debounce)
+  Future<void> _onAddressChanged() async {
+    String address = _addressController.text;
+    if (address.length < 5) return; // Chỉ gọi API nếu địa chỉ dài hơn 5 ký tự
+
+    if (_debounceGeocoding?.isActive ?? false) _debounceGeocoding?.cancel();
+    _debounceGeocoding = Timer(const Duration(milliseconds: 1000), () async {
+      try {
+        List<Location> locations = await locationFromAddress(address);
+        if (locations.isNotEmpty) {
+          Location location = locations.first;
+          LatLng newPosition = LatLng(location.latitude, location.longitude);
+          if (mounted) {
+            setState(() {
+              _currentPosition = newPosition;
+            });
+            _moveCameraToPosition(newPosition);
+            _updateAddressFields(newPosition);
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Không tìm thấy địa chỉ')),
+            );
+          }
+        }
+      } catch (e) {
+        print('Error geocoding address: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Lỗi khi tìm kiếm địa chỉ: $e')),
+          );
+        }
+      }
+    });
+  }
+
+  // Di chuyển camera với debounce để tránh gọi quá nhiều lần
+  void _moveCameraToPosition(LatLng position) {
+    if (_debounceCamera?.isActive ?? false) _debounceCamera?.cancel();
+    _debounceCamera = Timer(const Duration(milliseconds: 500), () {
+      _mapController?.animateCamera(CameraUpdate.newLatLng(position));
+    });
+  }
+
+  // Cập nhật các trường địa chỉ từ tọa độ (sử dụng cache)
+  Future<void> _updateAddressFields(LatLng position) async {
+    // Kiểm tra cache trước khi gọi API
+    if (_addressCache.containsKey(position)) {
+      if (mounted) {
+        setState(() {
+          _addressController.text = _addressCache[position]!;
+        });
+      }
+      return;
+    }
+
     try {
       List<Placemark> placemarks = await placemarkFromCoordinates(
         position.latitude,
@@ -141,14 +217,26 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
           placemark.country,
         ].where((element) => element != null && element.isNotEmpty).join(', ');
 
-        setState(() {
-          _addressController.text = address;
-          _streetController.text = placemark.street ?? '';
-          _postCodeController.text = placemark.postalCode ?? '';
-        });
+        _addressCache[position] = address; // Lưu vào cache
+        if (mounted) {
+          setState(() {
+            _addressController.text = address;
+            if (_streetController.text.isEmpty) {
+              _streetController.text = placemark.street ?? '';
+            }
+            if (_postCodeController.text.isEmpty) {
+              _postCodeController.text = placemark.postalCode ?? '';
+            }
+          });
+        }
       }
     } catch (e) {
       print('Error reverse geocoding: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi lấy địa chỉ từ tọa độ: $e')),
+        );
+      }
     }
   }
 
@@ -169,7 +257,9 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
               onMapCreated: (controller) {
                 _mapController = controller;
               },
+              onMapTapped: _onMapTapped, // Thêm sự kiện chạm vào bản đồ
               onBackPressed: () => Navigator.pop(context),
+              onGetCurrentLocation: _getCurrentLocation,
             ),
             // Phần nội dung chính
             Expanded(
@@ -226,14 +316,18 @@ class MapSection extends StatelessWidget {
   final double height;
   final LatLng position;
   final Function(GoogleMapController) onMapCreated;
+  final Function(LatLng) onMapTapped; // Thêm callback cho sự kiện chạm
   final VoidCallback onBackPressed;
+  final VoidCallback onGetCurrentLocation;
 
   const MapSection({
     super.key,
     required this.height,
     required this.position,
     required this.onMapCreated,
+    required this.onMapTapped,
     required this.onBackPressed,
+    required this.onGetCurrentLocation,
   });
 
   @override
@@ -243,16 +337,19 @@ class MapSection extends StatelessWidget {
       child: Stack(
         children: [
           GoogleMap(
-            initialCameraPosition: CameraPosition(target: position, zoom: 15),
+            initialCameraPosition: CameraPosition(target: position, zoom: 13),
             onMapCreated: onMapCreated,
+            onTap: onMapTapped, // Thêm sự kiện onTap
             markers: {
               Marker(
                 markerId: const MarkerId('current_position'),
                 position: position,
               ),
             },
-            myLocationEnabled: true,
+            myLocationEnabled: false,
             myLocationButtonEnabled: false,
+            compassEnabled: false,
+            mapToolbarEnabled: false,
           ),
           Padding(
             padding: const EdgeInsets.all(kSpacing),
@@ -261,6 +358,11 @@ class MapSection extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.black),
                   onPressed: onBackPressed,
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.my_location, color: Colors.black),
+                  onPressed: onGetCurrentLocation,
                 ),
               ],
             ),
