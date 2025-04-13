@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserAddress } from 'src/database/entities/user-address.entity';
 import { User } from 'src/database/entities/user.entity';
@@ -48,5 +48,46 @@ export class UserAddressRepository {
       where: { user: { user_id } },
       order: { created_at: 'DESC' },
     });
+  }
+
+  // Cập nhật địa chỉ
+  async updateAddressForUser(
+    addressId: number,
+    userId: number,
+    body: Omit<UserAddressBodyType, 'user_id'>,
+  ) {
+    // Kiểm tra xem địa chỉ có tồn tại không
+    const address = await this.userAddressRepository.findOne({
+      where: { address_id: addressId, user: { user_id: userId } },
+    });
+    if (!address) throw new NotFoundException('Địa chỉ không tồn tại');
+
+    // Cập nhật địa chỉ
+    await this.userAddressRepository.update(
+      { address_id: addressId, user: { user_id: userId } },
+      { ...body },
+    );
+    return {
+      message: 'Cập nhật địa chỉ thành công',
+      data: body,
+    };
+  }
+
+  // Xoá địa chỉ
+  async deleteAddressForUser(addressId: number, userId: number) {
+    // Kiểm tra xem địa chỉ có tồn tại không
+    const address = await this.userAddressRepository.findOne({
+      where: { address_id: addressId, user: { user_id: userId } },
+    });
+    if (!address) throw new NotFoundException('Địa chỉ không tồn tại');
+
+    // Xoá địa chỉ
+    await this.userAddressRepository.delete({
+      address_id: addressId,
+      user: { user_id: userId },
+    });
+    return {
+      message: 'Xoá địa chỉ thành công',
+    };
   }
 }
