@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { UserProfileBodyDTO } from 'src/routes/user/user.dto';
 
 import { UserAddressBodyType } from 'src/routes/user/user.model';
 import { UserAddressRepository } from 'src/routes/user/user.repo';
@@ -107,5 +108,13 @@ export class UserService {
       addressId,
       userId,
     );
+  }
+
+  async getUserProfile(userId: number) {
+    return await this.userAddressRepository.getUserProfile(userId);
+  }
+
+  async updateUserProfile(userId: number, body: UserProfileBodyDTO) {
+    return await this.userAddressRepository.updateUserProfile(userId, body);
   }
 }
