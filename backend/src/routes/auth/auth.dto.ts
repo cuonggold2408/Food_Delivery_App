@@ -1,6 +1,7 @@
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from '@anatine/zod-nestjs';
 import {
   LoginBodySchema,
+  LoginBodySwaggerSchema,
   LoginResponseSchema,
   LogoutBodySchema,
   RefreshTokenBodySchema,
@@ -16,6 +17,7 @@ export class RegisterResponseDTO extends createZodDto(RegisterResponseSchema) {}
 export class SendOTPBodyDTO extends createZodDto(SendOTPBodySchema) {}
 
 export class LoginBodyDTO extends createZodDto(LoginBodySchema) {}
+export class LoginBodySwaggerDTO extends createZodDto(LoginBodySwaggerSchema) {}
 export class LoginResponseDTO extends createZodDto(LoginResponseSchema) {}
 
 export class RefreshTokenBodyDTO extends createZodDto(RefreshTokenBodySchema) {}
