@@ -1,4 +1,4 @@
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from '@anatine/zod-nestjs';
 import { UserAddressBodySchema } from 'src/routes/user/user.model';
 import { UserProfileSchema } from 'src/shared/models/shared-user.model';
 
