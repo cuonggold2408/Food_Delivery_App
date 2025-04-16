@@ -15,8 +15,17 @@ export class UserAddressRepository {
     private readonly userRepository: Repository<User>,
   ) {}
 
+  /*
+    UserAddress
+    - Tạo địa chỉ
+    - Cập nhật địa chỉ
+    - Xoá địa chỉ
+    - Lấy danh sách địa chỉ của user
+
+  */
+
   // Kiểm tra xem user có tồn tại không
-  async checkUserExists(user_id: UserAddressBodyType['user_id']) {
+  async checkUserExists(user_id: number) {
     const user = await this.userRepository.findOne({
       where: { user_id },
     });
@@ -24,10 +33,10 @@ export class UserAddressRepository {
   }
 
   // Tạo address
-  async createAddress(data: UserAddressBodyType) {
+  async createAddress(data: UserAddressBodyType, user_id: number) {
     const newAddress = this.userAddressRepository.create({
       ...data,
-      user: { user_id: data.user_id },
+      user: { user_id },
     });
     await this.userAddressRepository.save(newAddress);
 
@@ -35,7 +44,7 @@ export class UserAddressRepository {
   }
 
   // Cập nhật toàn bộ address của user thành is_default = false
-  async unsetDefaultAddresses(user_id: UserAddressBodyType['user_id']) {
+  async unsetDefaultAddresses(user_id: number) {
     await this.userAddressRepository.update(
       { user: { user_id }, is_default: true }, // điều kiện
       { is_default: false },
@@ -43,7 +52,7 @@ export class UserAddressRepository {
   }
 
   // Tuỳ chọn: Lấy danh sách địa chỉ user (nếu cần check)
-  async findUserAddresses(user_id: UserAddressBodyType['user_id']) {
+  async findUserAddresses(user_id: number) {
     return this.userAddressRepository.find({
       where: { user: { user_id } },
       order: { created_at: 'DESC' },
@@ -90,4 +99,12 @@ export class UserAddressRepository {
       message: 'Xoá địa chỉ thành công',
     };
   }
+
+  /*
+    UserProfile
+    - Lấy thông tin user
+    - Cập nhật thông tin user
+  */
+
+  // async getUserProfile
 }

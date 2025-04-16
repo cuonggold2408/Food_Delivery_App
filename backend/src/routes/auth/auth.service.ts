@@ -161,14 +161,7 @@ export class AuthService {
       provider_name: body.provider_name,
     });
 
-    const cleanUser = {
-      ...user,
-      password: undefined,
-      user_id: undefined,
-      created_at: undefined,
-      updated_at: undefined,
-    };
-    return { ...tokens, user: cleanUser };
+    return tokens;
   }
 
   async generateTokens({ user_id, provider_name }: AccessTokenPayloadCreate) {
