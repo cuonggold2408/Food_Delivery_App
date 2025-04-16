@@ -2,12 +2,14 @@ import { Controller, Post, Body, HttpStatus, HttpCode } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
   LoginBodyDTO,
+  LoginBodySwaggerDTO,
   LogoutBodyDTO,
   RefreshTokenBodyDTO,
   RegisterBodyDTO,
   SendOTPBodyDTO,
 } from 'src/routes/auth/auth.dto';
 import { IsPublic } from 'src/shared/decorators/auth.decorator';
+import { ApiBody } from '@nestjs/swagger';
 
 @Controller('auth')
 export class AuthController {
@@ -27,6 +29,7 @@ export class AuthController {
 
   @Post('login')
   @IsPublic()
+  @ApiBody({ type: LoginBodySwaggerDTO })
   login(@Body() body: LoginBodyDTO) {
     return this.authService.login(body);
   }

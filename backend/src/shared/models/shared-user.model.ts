@@ -1,19 +1,29 @@
 import { z } from 'zod';
 
+import { extendZodWithOpenApi } from '@anatine/zod-openapi';
+import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
+
+extendZodWithOpenApi(z);
+
+const registry = new OpenAPIRegistry();
+
 export enum UserRole {
   CUSTOMER = 'customer',
   ADMIN = 'admin',
 }
 
-export const UserSchema = z.object({
-  user_id: z.number(),
-  email: z.string().email(),
-  password: z.string().min(8).max(100),
-  name: z.string().min(1).max(100),
-  user_role: z.nativeEnum(UserRole),
-  created_at: z.date(),
-  updated_at: z.date(),
-});
+export const UserSchema = registry.register(
+  'User',
+  z.object({
+    user_id: z.number(),
+    email: z.string().email().openapi({ example: 'example@gmail.com' }),
+    password: z.string().min(8).max(100).openapi({ example: 'yourpassword' }),
+    name: z.string().min(1).max(100),
+    user_role: z.nativeEnum(UserRole),
+    created_at: z.date(),
+    updated_at: z.date(),
+  }),
+);
 
 export type UserType = z.infer<typeof UserSchema>;
 
