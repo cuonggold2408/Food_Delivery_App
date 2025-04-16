@@ -47,7 +47,6 @@ export const UserAddressSchema = z.object({
 export type UserAddressType = z.infer<typeof UserAddressSchema>;
 
 export const UserProfileSchema = z.object({
-  user_id: z.number(),
   name: z.string().min(1).max(100),
   email: z.string().email(),
   phone_number: z.string().max(20).default(''),

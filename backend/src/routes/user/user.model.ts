@@ -18,9 +18,7 @@ export const UserAddressBodySchema = UserAddressSchema.pick({
 export type UserAddressBodyType = z.infer<typeof UserAddressBodySchema>;
 
 export const UserProfileBodySchema = UserProfileSchema.pick({
-  user_id: true,
   name: true,
-  email: true,
   phone_number: true,
   bio: true,
 }).strict();
