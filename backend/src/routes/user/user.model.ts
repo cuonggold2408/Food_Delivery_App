@@ -1,8 +1,10 @@
-import { UserAddressSchema } from 'src/shared/models/shared-user.model';
+import {
+  UserAddressSchema,
+  UserProfileSchema,
+} from 'src/shared/models/shared-user.model';
 import { z } from 'zod';
 
 export const UserAddressBodySchema = UserAddressSchema.pick({
-  user_id: true,
   address_name: true,
   phone_number: true,
   recipient_name: true,
@@ -14,3 +16,10 @@ export const UserAddressBodySchema = UserAddressSchema.pick({
   longitude: true,
 }).strict();
 export type UserAddressBodyType = z.infer<typeof UserAddressBodySchema>;
+
+export const UserProfileBodySchema = UserProfileSchema.pick({
+  name: true,
+  phone_number: true,
+  bio: true,
+}).strict();
+export type UserProfileBodyType = z.infer<typeof UserProfileBodySchema>;
