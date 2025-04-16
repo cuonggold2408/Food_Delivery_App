@@ -1,4 +1,5 @@
 import { MenuItem } from 'src/database/entities/menu-item.entity';
+import { RestaurantCategoryMapping } from 'src/database/entities/restaurant/restaurant-category-mapping.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -33,6 +34,9 @@ export class Restaurant {
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   updated_at: Date;
+
+  @OneToMany(() => RestaurantCategoryMapping, (mapping) => mapping.restaurant)
+  mappings: RestaurantCategoryMapping[];
 
   @OneToMany(() => MenuItem, (menuItem) => menuItem.restaurant, {
     cascade: true,

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:frontend/views/settings/menu.dart';
+import 'package:frontend/views/settings/add_address.dart'; // Import AddAddressScreen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -177,32 +180,66 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Image.asset('assets/images/menu.png'),
             ),
             SizedBox(width: screenWidth * 0.02),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'DELIVER TO',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _primaryColor,
-                    fontFamily: _fontFamily,
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder:
+                        (context, animation, secondaryAnimation) =>
+                            const AddAddressScreen(),
+                    transitionsBuilder: (
+                      context,
+                      animation,
+                      secondaryAnimation,
+                      child,
+                    ) {
+                      const begin = Offset(1.0, 0.0); // Trượt từ phải sang trái
+                      const end = Offset.zero;
+                      const curve = Curves.easeInOut;
+
+                      var tween = Tween(
+                        begin: begin,
+                        end: end,
+                      ).chain(CurveTween(curve: curve));
+                      var offsetAnimation = animation.drive(tween);
+
+                      return SlideTransition(
+                        position: offsetAnimation,
+                        child: child,
+                      );
+                    },
+                    transitionDuration: const Duration(milliseconds: 300),
                   ),
-                ),
-                Row(
-                  children: [
-                    Text(
-                      'Halal Lab office',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: _fontFamily,
-                        color: _textColor,
-                      ),
+                );
+              },
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'DELIVER TO',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _primaryColor,
+                      fontFamily: _fontFamily,
                     ),
-                    Icon(Icons.arrow_drop_down),
-                  ],
-                ),
-              ],
+                  ),
+                  Row(
+                    children: [
+                      Text(
+                        'Halal Lab office',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: _fontFamily,
+                          color: _textColor,
+                        ),
+                      ),
+                      Icon(Icons.arrow_drop_down),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -212,13 +249,44 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCircularIcon(double screenWidth, {required Widget icon}) {
-    return ClipRRect(
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder:
+                (context, animation, secondaryAnimation) => const Menu(),
+            transitionsBuilder: (
+              context,
+              animation,
+              secondaryAnimation,
+              child,
+            ) {
+              const begin = Offset(1.0, 0.0); // Trượt từ phải sang trái
+              const end = Offset.zero;
+              const curve = Curves.easeInOut;
+
+              var tween = Tween(
+                begin: begin,
+                end: end,
+              ).chain(CurveTween(curve: curve));
+              var offsetAnimation = animation.drive(tween);
+
+              return SlideTransition(position: offsetAnimation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 300),
+          ),
+        );
+      },
       borderRadius: BorderRadius.circular(screenWidth * 0.06),
-      child: Container(
-        color: _defaultChipColor,
-        width: screenWidth * 0.12,
-        height: screenWidth * 0.12,
-        child: icon,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(screenWidth * 0.06),
+        child: Container(
+          color: _defaultChipColor,
+          width: screenWidth * 0.12,
+          height: screenWidth * 0.12,
+          child: icon,
+        ),
       ),
     );
   }
