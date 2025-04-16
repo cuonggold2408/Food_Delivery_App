@@ -2,6 +2,13 @@ import { TypeOfVerificationCode } from 'src/shared/constants/auth.constant';
 import { UserSchema } from 'src/shared/models/shared-user.model';
 import { z } from 'zod';
 
+import { extendZodWithOpenApi } from '@anatine/zod-openapi';
+import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
+
+extendZodWithOpenApi(z);
+
+const registry = new OpenAPIRegistry();
+
 export const VerificationCodeSchema = z.object({
   email: z.string().email(),
   type: z.enum([
@@ -41,8 +48,20 @@ export const LoginBodySchema = UserSchema.pick({
   email: true,
   password: true,
 })
-  .extend({ provider_name: z.string().default('local') })
+  .extend({
+    provider_name: z.string().default('local'),
+  })
   .strict();
+
+export const LoginBodySwaggerSchema = registry.register(
+  'LoginBody',
+  LoginBodySchema.omit({ provider_name: true }).openapi({
+    example: {
+      email: 'example@gmail.com',
+      password: 'yourpassword',
+    },
+  }),
+);
 
 export const RefreshTokenBodySchema = z
   .object({
