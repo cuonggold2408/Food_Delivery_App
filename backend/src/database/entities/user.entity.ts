@@ -19,6 +19,12 @@ export class User {
   @Column({ type: 'varchar', length: 20, default: 'customer' })
   user_role: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: false, default: '' })
+  bio: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: false, default: '' })
+  phone_number: string;
+
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 
