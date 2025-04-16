@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -9,6 +11,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _selectedCategory = 'ALL';
+  final List<dynamic> _shops = [];
+  int _page = 1; // Trang hiện tại
+  bool _isLoading = false; // Trạng thái đang tải
+  bool _hasMore = true; // Còn dữ liệu để tải
+  final ScrollController _scrollController = ScrollController();
+  bool _canFetch = true; // Debounce để tránh gọi API liên tục
 
   // Constants for styling
   static const _primaryColor = Color(0xFFFC6E2A);
@@ -16,6 +24,78 @@ class _HomeScreenState extends State<HomeScreen> {
   static const _fontFamily = 'San Francisco';
   static const _chipPadding = EdgeInsets.symmetric(horizontal: 8, vertical: 6);
   static const _defaultChipColor = Color(0xFFECF0F4);
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchShops();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchShops() async {
+    if (_isLoading || !_hasMore) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await http.get(
+        Uri.parse("http://10.0.2.2:3000/products?page=$_page&limit=10"),
+      );
+
+      print('Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData['data'] != null && jsonData['data']['data'] != null) {
+          setState(() {
+            _shops.addAll(jsonData['data']['data']); // Gộp dữ liệu mới
+            _page++;
+            _isLoading = false;
+            if (jsonData['data']['data'].length < 10) {
+              _hasMore = false; // Hết dữ liệu
+            }
+          });
+        } else {
+          print('Invalid data structure');
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      } else {
+        print('Request failed with status: ${response.statusCode}');
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching shops: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _onScroll() {
+    if (_canFetch &&
+        _scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200) {
+      _canFetch = false;
+      _fetchShops().then((_) {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          _canFetch = true; // Cho phép gọi lại sau 500ms
+        });
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,25 +110,60 @@ class _HomeScreenState extends State<HomeScreen> {
             horizontal: screenWidth * 0.04,
             vertical: screenHeight * 0.01,
           ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(screenWidth),
-                SizedBox(height: screenHeight * 0.02),
-                _buildGreeting(screenWidth),
-                SizedBox(height: screenHeight * 0.02),
-                _buildSearchBar(),
-                SizedBox(height: screenHeight * 0.02),
-                _buildCategoriesSection(screenWidth, screenHeight),
-                SizedBox(height: screenHeight * 0.02),
-                _buildRestaurantsSection(context, screenWidth, screenHeight),
-              ],
-            ),
+          child: CustomScrollView(
+            controller: _scrollController, // Sử dụng ScrollController
+            slivers: [
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(screenWidth),
+                    SizedBox(height: screenHeight * 0.02),
+                    _buildGreeting(screenWidth),
+                    SizedBox(height: screenHeight * 0.02),
+                    _buildSearchBar(),
+                    SizedBox(height: screenHeight * 0.02),
+                    _buildCategoriesSection(screenWidth, screenHeight),
+                    SizedBox(height: screenHeight * 0.02),
+                    _buildRestaurantsSectionHeader(),
+                    SizedBox(height: screenHeight * 0.01),
+                  ],
+                ),
+              ),
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    if (index < _shops.length) {
+                      final shop = _shops[index];
+                      return _buildRestaurantCard(
+                        screenWidth,
+                        screenHeight,
+                        shop['shop_name'] ?? 'Unknown',
+                        shop['shop_image'] ?? '',
+                      );
+                    }
+                    if (_isLoading || _hasMore) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                  childCount: _shops.length + (_isLoading || _hasMore ? 1 : 0),
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildRestaurantsSectionHeader() {
+    return _buildSectionHeader('OPEN RESTAURANTS', 'SEE ALL');
   }
 
   Widget _buildHeader(double screenWidth) {
@@ -208,7 +323,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final imagePath = _getImagePathForCategory(label);
 
     return GestureDetector(
-      onTap: () => setState(() => _selectedCategory = label),
+      onTap:
+          () => setState(() {
+            _selectedCategory = label;
+            _shops.clear();
+            _page = 1;
+            _hasMore = true;
+            _fetchShops();
+          }),
       child: Container(
         padding: _chipPadding,
         decoration: BoxDecoration(
@@ -249,22 +371,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Widget _buildRestaurantsSection(
-    BuildContext context,
+  Widget _buildRestaurantCard(
     double screenWidth,
     double screenHeight,
+    String shopName,
+    String shopImage,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader('OPEN RESTAURANTS', 'SEE ALL'),
-        SizedBox(height: screenHeight * 0.01),
-        _buildRestaurantCard(screenWidth, screenHeight),
-      ],
-    );
-  }
-
-  Widget _buildRestaurantCard(double screenWidth, double screenHeight) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -274,15 +386,27 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             height: screenHeight * 0.15,
             width: double.infinity,
-            color: Colors.grey[400],
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(10),
+              ),
+              image: DecorationImage(
+                image:
+                    shopImage.isNotEmpty
+                        ? NetworkImage(shopImage)
+                        : const AssetImage('assets/images/vuongsonhien.jfif')
+                            as ImageProvider,
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
           Padding(
             padding: EdgeInsets.all(screenWidth * 0.02),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Rose Garden Restaurant',
+                Text(
+                  shopName,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -291,7 +415,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 SizedBox(height: screenHeight * 0.005),
                 Text(
-                  'Burger • Chicken • Rice • Wings',
+                  'Beverages • Snacks',
                   style: TextStyle(
                     fontSize: screenWidth * 0.035,
                     color: Colors.grey[600],
