@@ -5,25 +5,26 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { RestaurantCategory } from 'src/database/entities/restaurant/restaurant-category.entity';
-import { ProductRepository } from 'src/routes/product/product.repo';
+import { RestaurantRepository } from 'src/routes/restaurant/restaurant.repo';
 import { Repository } from 'typeorm';
 
 @Injectable()
-export class ProductService {
+export class RestaurantService {
   constructor(
-    private readonly productRepository: ProductRepository,
+    private readonly restaurantRepository: RestaurantRepository,
     @InjectRepository(RestaurantCategory)
     private readonly categoryRepo: Repository<RestaurantCategory>,
   ) {}
-  async getAllProducts(page: number, limit: number) {
+  async getAllRestaurants(page: number, limit: number) {
     // Tính skip
     const skip = (page - 1) * limit;
 
     // Lấy dữ liệu kèm menuItems
     const restaurants =
-      await this.productRepository.getRestaurantsWithMenuItems(skip, limit);
+      await this.restaurantRepository.getRestaurantsWithMenuItems(skip, limit);
 
     const result = restaurants.map((rest) => ({
+      shop_id: rest.restaurant_id,
       shop_name: rest.name,
       shop_address: rest.street_address,
       shop_image: rest.shop_image_url,
@@ -43,7 +44,7 @@ export class ProductService {
     };
   }
 
-  async getAllProductsByCategories(
+  async getAllRestaurantsByCategories(
     categoryNames: string[],
     page: number,
     limit: number,
@@ -63,11 +64,12 @@ export class ProductService {
       throw new NotFoundException('Không có category nào hợp lệ');
     }
 
-    const restaurants = await this.productRepository.getRestaurantsByCategories(
-      validCategories.map((c) => c.name),
-      skip,
-      limit,
-    );
+    const restaurants =
+      await this.restaurantRepository.getRestaurantsByCategories(
+        validCategories.map((c) => c.name),
+        skip,
+        limit,
+      );
 
     const grouped = {
       categories: categoryNames,
@@ -89,6 +91,32 @@ export class ProductService {
       currentPage: page,
       limit,
       data: grouped,
+    };
+  }
+
+  async getRestaurantById(id: number) {
+    const restaurant = await this.restaurantRepository.getRestaurantById(id);
+    return {
+      ...restaurant,
+      restaurant_id: undefined,
+      menuItems: restaurant.menuItems.map((item) => ({
+        product_name: item.name,
+        product_desc: item.description,
+        product_price: item.price,
+        product_image: item.image_url,
+        product_is_available: item.is_available,
+      })),
+    };
+  }
+
+  async getAllCategories() {
+    const categories = await this.restaurantRepository.getAllCategories();
+
+    return {
+      categories: categories.map((category) => ({
+        category_name: category.name,
+        category_image: category.image_url,
+      })),
     };
   }
 }

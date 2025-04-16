@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { UserProfileBodyDTO } from 'src/routes/user/user.dto';
 
 import { UserAddressBodyType } from 'src/routes/user/user.model';
 import { UserAddressRepository } from 'src/routes/user/user.repo';
@@ -11,9 +12,8 @@ import { UserAddressRepository } from 'src/routes/user/user.repo';
 export class UserService {
   constructor(private readonly userAddressRepository: UserAddressRepository) {}
 
-  async saveAddress(body: UserAddressBodyType) {
+  async saveAddress(body: UserAddressBodyType, user_id: number) {
     const {
-      user_id,
       address_name,
       phone_number,
       recipient_name,
@@ -43,18 +43,20 @@ export class UserService {
     }
 
     // Tạo địa chỉ mới
-    const newAddress = await this.userAddressRepository.createAddress({
+    const newAddress = await this.userAddressRepository.createAddress(
+      {
+        address_name,
+        phone_number,
+        recipient_name,
+        street_address,
+        postal_code,
+        is_default,
+        apartment,
+        latitude,
+        longitude,
+      },
       user_id,
-      address_name,
-      phone_number,
-      recipient_name,
-      street_address,
-      postal_code,
-      is_default,
-      apartment,
-      latitude,
-      longitude,
-    });
+    );
 
     return {
       message: 'Lưu địa chỉ thành công',
@@ -80,7 +82,7 @@ export class UserService {
   async updateAddress(
     addressId: number,
     userId: number,
-    body: Omit<UserAddressBodyType, 'user_id'>,
+    body: UserAddressBodyType,
   ) {
     // Kiểm tra xem user có tồn tại không
     const user = await this.userAddressRepository.checkUserExists(userId);
@@ -106,5 +108,13 @@ export class UserService {
       addressId,
       userId,
     );
+  }
+
+  async getUserProfile(userId: number) {
+    return await this.userAddressRepository.getUserProfile(userId);
+  }
+
+  async updateUserProfile(userId: number, body: UserProfileBodyDTO) {
+    return await this.userAddressRepository.updateUserProfile(userId, body);
   }
 }
