@@ -1,7 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserAddress } from 'src/database/entities/user-address.entity';
 import { User } from 'src/database/entities/user.entity';
+import {
+  UserProfileBodyDTO,
+  UserProfileResDTO,
+} from 'src/routes/user/user.dto';
 import { UserAddressBodyType } from 'src/routes/user/user.model';
 import { Repository } from 'typeorm';
 
@@ -106,5 +114,35 @@ export class UserAddressRepository {
     - Cập nhật thông tin user
   */
 
-  // async getUserProfile
+  async getUserProfile(userId: number): Promise<UserProfileResDTO> {
+    const user = await this.userRepository.findOne({
+      where: { user_id: userId },
+    });
+    if (!user) throw new NotFoundException('Người dùng không tồn tại');
+
+    return {
+      name: user.name,
+      email: user.email,
+      phone_number: user.phone_number,
+      bio: user.bio,
+    };
+  }
+
+  async updateUserProfile(userId: number, body: UserProfileBodyDTO) {
+    const user = await this.userRepository.findOne({
+      where: { user_id: userId },
+    });
+
+    if (!user) throw new NotFoundException('Người dùng không tồn tại');
+
+    if (user.email !== body.email) {
+      throw new BadRequestException('Không thể cập nhật email');
+    }
+
+    await this.userRepository.update(userId, body);
+
+    return {
+      message: 'Cập nhật thông tin thành công',
+    };
+  }
 }
