@@ -3,7 +3,9 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MenuItem } from 'src/database/entities/menu-item.entity';
-import { Restaurant } from 'src/database/entities/restaurant.entity';
+import { RestaurantCategoryMapping } from 'src/database/entities/restaurant/restaurant-category-mapping.entity';
+import { RestaurantCategory } from 'src/database/entities/restaurant/restaurant-category.entity';
+import { Restaurant } from 'src/database/entities/restaurant/restaurant.entity';
 import { User } from 'src/database/entities/user.entity';
 import { AccessTokenGuard } from 'src/shared/guards/access-token.guard';
 import { ApiKeyGuard } from 'src/shared/guards/api-key.guard';
@@ -34,6 +36,15 @@ const sharedServices = [
     },
   ],
   exports: sharedServices,
-  imports: [JwtModule, TypeOrmModule.forFeature([User, Restaurant, MenuItem])],
+  imports: [
+    JwtModule,
+    TypeOrmModule.forFeature([
+      User,
+      Restaurant,
+      MenuItem,
+      RestaurantCategory,
+      RestaurantCategoryMapping,
+    ]),
+  ],
 })
 export class SharedModule {}
