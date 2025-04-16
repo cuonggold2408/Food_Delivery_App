@@ -8,7 +8,10 @@ import {
   Put,
   Req,
 } from '@nestjs/common';
-import { UserAddressBodyDTO } from 'src/routes/user/user.dto';
+import {
+  UserAddressBodyDTO,
+  UserProfileBodyDTO,
+} from 'src/routes/user/user.dto';
 import { UserService } from 'src/routes/user/user.service';
 
 @Controller('user')
@@ -47,8 +50,15 @@ export class UserController {
   }
 
   // User Profile
-  // @Get('profile/:userId')
-  // getUserProfile(@Param('userId') userId: number) {
-  //   return this.userService.getUserProfile(userId);
-  // }
+  @Get('profile')
+  getUserProfile(@Req() req: any) {
+    const userId = req.user.user_id;
+    return this.userService.getUserProfile(userId);
+  }
+
+  @Put('profile')
+  updateUserProfile(@Body() body: UserProfileBodyDTO, @Req() req: any) {
+    const userId = req.user.user_id;
+    return this.userService.updateUserProfile(userId, body);
+  }
 }
