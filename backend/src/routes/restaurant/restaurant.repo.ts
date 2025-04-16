@@ -1,13 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { RestaurantCategory } from 'src/database/entities/restaurant/restaurant-category.entity';
 import { Restaurant } from 'src/database/entities/restaurant/restaurant.entity';
 import { Repository } from 'typeorm';
 
 @Injectable()
-export class ProductRepository {
+export class RestaurantRepository {
   constructor(
     @InjectRepository(Restaurant)
     private readonly restaurantRepository: Repository<Restaurant>,
+
+    @InjectRepository(RestaurantCategory)
+    private readonly categoryRepo: Repository<RestaurantCategory>,
   ) {}
   async getRestaurantsWithMenuItems(skip: number, take: number) {
     return this.restaurantRepository.find({
@@ -31,5 +35,22 @@ export class ProductRepository {
       .skip(skip)
       .take(take)
       .getMany();
+  }
+
+  async getRestaurantById(id: number) {
+    const restaurant = await this.restaurantRepository.findOne({
+      where: { restaurant_id: id },
+      relations: ['menuItems'],
+    });
+
+    if (!restaurant) {
+      throw new NotFoundException('Không tìm thấy nhà hàng');
+    }
+
+    return restaurant;
+  }
+
+  async getAllCategories() {
+    return await this.categoryRepo.find();
   }
 }
