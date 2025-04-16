@@ -45,3 +45,11 @@ export const UserAddressSchema = z.object({
   updated_at: z.date(),
 });
 export type UserAddressType = z.infer<typeof UserAddressSchema>;
+
+export const UserProfileSchema = z.object({
+  name: z.string().min(1).max(100),
+  email: z.string().email(),
+  phone_number: z.string().max(20).default(''),
+  bio: z.string().max(255).optional(),
+});
+export type UserProfileType = z.infer<typeof UserProfileSchema>;

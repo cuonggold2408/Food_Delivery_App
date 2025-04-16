@@ -10,7 +10,7 @@ import { ZodSerializerInterceptor } from 'nestjs-zod';
 import { HttpExceptionFilter } from 'src/shared/filters/http-exception.filter';
 import { AuthModule } from 'src/routes/auth/auth.module';
 import { UserModule } from './routes/user/user.module';
-import { ProductModule } from './routes/product/product.module';
+import { RestaurantModule } from 'src/routes/restaurant/restaurant.module';
 
 @Module({
   imports: [
@@ -21,7 +21,7 @@ import { ProductModule } from './routes/product/product.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    ProductModule,
+    RestaurantModule,
   ],
   controllers: [AppController],
   providers: [
