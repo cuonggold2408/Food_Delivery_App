@@ -111,6 +111,7 @@ void showTopSnackBar(
 /// Widget that controls all animations
 class _TopSnackBar extends StatefulWidget {
   const _TopSnackBar({
+    super.key,
     required this.child,
     required this.onDismissed,
     required this.animationDuration,
