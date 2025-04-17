@@ -4,6 +4,7 @@ import 'package:frontend/views/auth/register_screen.dart';
 import 'package:frontend/conponents/custom_snack_bar.dart';
 import 'package:frontend/conponents/top_snack_bar.dart';
 import 'package:frontend/views/home/home_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -79,6 +80,12 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       if (success) {
+        final data = response['data'] as Map<String, dynamic>?;
+        if (data != null) {
+          final String token = data['accessToken'] as String? ?? '';
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('access_token', token);
+        }
         _showSuccessSnackbar('Đăng nhập thành công!');
         Navigator.pushReplacement(
           context,

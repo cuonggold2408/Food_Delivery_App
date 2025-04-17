@@ -510,7 +510,9 @@
       "languageVersion": "3.7"
     }
   ],
-  "generated": "2025-04-17T15:38:40.431860Z",
+
+  "generated": "2025-04-17T16:56:23.625436Z",
+
   "generator": "pub",
   "generatorVersion": "3.7.0",
   "flutterRoot": "file:///C:/src/flutter",

@@ -143,7 +143,7 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFF121212), // Màu nền toàn màn hình là đen than
+      backgroundColor: Color(0xFF121212), 
       appBar: AppBar(
         centerTitle: true,
         backgroundColor: Color(0xFF121212),
