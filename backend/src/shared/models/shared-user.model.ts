@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { extendZodWithOpenApi } from '@anatine/zod-openapi';
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
+import { AddressLabel } from 'src/database/entities/user-address.entity';
 
 extendZodWithOpenApi(z);
 
@@ -46,9 +47,8 @@ export const UserAddressSchema = z.object({
   phone_number: z.string().max(20),
   recipient_name: z.string().max(100),
   street_address: z.string().max(255),
-  postal_code: z.string().max(20),
   apartment: z.string().max(100).optional(),
-  is_default: z.boolean().default(false),
+  label: z.nativeEnum(AddressLabel),
   latitude: z.number(),
   longitude: z.number(),
   created_at: z.date(),
