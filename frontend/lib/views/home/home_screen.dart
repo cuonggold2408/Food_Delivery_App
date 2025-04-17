@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:frontend/views/settings/menu.dart';
 import 'package:frontend/views/settings/add_address.dart'; // Import AddAddressScreen
+import 'package:frontend/services/api_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
