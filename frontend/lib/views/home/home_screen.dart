@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-
+import 'package:frontend/views/restaurants/restaurent_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:frontend/views/settings/menu.dart';
-import 'package:frontend/views/settings/add_address.dart'; // Import AddAddressScreen
+import 'package:frontend/views/settings/add_address.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,13 +13,14 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String _selectedCategory = 'ALL';
+  final Set<String> _selectedCategories = {'ALL'};
   final List<dynamic> _shops = [];
-  int _page = 1; // Trang hiện tại
-  bool _isLoading = false; // Trạng thái đang tải
-  bool _hasMore = true; // Còn dữ liệu để tải
+  int _page = 1;
+  bool _isLoading = false;
+  bool _hasMore = true;
   final ScrollController _scrollController = ScrollController();
-  bool _canFetch = true; // Debounce để tránh gọi API liên tục
+  bool _canFetch = true;
+  late Future<List<String>> _categoriesFuture;
 
   // Constants for styling
   static const _primaryColor = Color(0xFFFC6E2A);
@@ -31,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _categoriesFuture = _fetchCategories();
     _fetchShops();
     _scrollController.addListener(_onScroll);
   }
@@ -41,49 +43,147 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  // Hàm tiện ích để viết hoa chữ cái đầu mỗi từ
+  String capitalizeEachWord(String text) {
+    if (text.isEmpty) return text;
+    return text
+        .split('-')
+        .map((word) => word.isNotEmpty
+            ? '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}'
+            : '')
+        .join(' ');
+  }
+
+  Future<List<String>> _fetchCategories() async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://10.0.2.2:3000/restaurants/categories/'),
+      );
+      print('Categories API Status: ${response.statusCode}');
+      print('Categories API Response: ${response.body}');
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        final categories = (jsonData['data']['categories'] as List)
+            .map((category) => category['category_name'] as String)
+            .map((category) => capitalizeEachWord(category))
+            .toList();
+        return ['ALL', ...categories];
+      } else {
+        throw Exception('Failed to load categories: Status ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching categories: $e');
+      throw Exception('Error fetching categories: $e');
+    }
+  }
+
   Future<void> _fetchShops() async {
-    if (_isLoading || !_hasMore) return;
+    print('Starting _fetchShops with categories: $_selectedCategories');
+    if (_isLoading || !_hasMore) {
+      print('Blocked _fetchShops: isLoading=$_isLoading, hasMore=$_hasMore');
+      return;
+    }
 
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final response = await http.get(
-        Uri.parse("http://10.0.2.2:3000/products?page=$_page&limit=10"),
+      final categoryQuery = _selectedCategories.isNotEmpty &&
+              !_selectedCategories.contains('ALL')
+          ? '&category=${_selectedCategories.map((category) => category.toLowerCase().replaceAll(' ', '-')).join(',')}'
+          : '';
+      final uri = Uri.parse(
+        'http://10.0.2.2:3000/restaurants?page=$_page&limit=10$categoryQuery',
       );
+      print('Fetching shops with URL: $uri');
+      final response = await http.get(uri).timeout(Duration(seconds: 10));
 
-      print('Status Code: ${response.statusCode}');
-      print('Response Body: ${response.body}');
+      print('Shops API Status: ${response.statusCode}');
+      print('Shops API Response: ${response.body}');
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        if (jsonData['data'] != null && jsonData['data']['data'] != null) {
+        print('Parsed JSON data: $jsonData');
+
+        if (jsonData['data'] == null) {
+          throw Exception('Invalid API response: "data" field is missing');
+        }
+
+        List<dynamic> shopsList = [];
+        final data = jsonData['data'];
+
+        if (data is List) {
+          shopsList = data;
+        } else if (data is Map<String, dynamic>) {
+          if (data.containsKey('data')) {
+            final innerData = data['data'];
+            if (innerData is List) {
+              shopsList = innerData;
+            } else if (innerData is Map<String, dynamic>) {
+              if (innerData.containsKey('shops') && innerData['shops'] is List) {
+                shopsList = innerData['shops'];
+              } else if (innerData.containsKey('restaurants') && innerData['restaurants'] is List) {
+                shopsList = innerData['restaurants'];
+              } else {
+                print('Available keys in data[\'data\']: ${innerData.keys}');
+                throw Exception('Invalid API response: Expected a list of shops in data[\'data\'], got a Map with keys: ${innerData.keys}');
+              }
+            } else {
+              throw Exception('Invalid API response: Expected a list or map in data[\'data\'], got ${innerData.runtimeType}');
+            }
+          } else if (data.containsKey('shops') && data['shops'] is List) {
+            shopsList = data['shops'];
+          } else if (data.containsKey('restaurants') && data['restaurants'] is List) {
+            shopsList = data['restaurants'];
+          } else {
+            print('Available keys in data: ${data.keys}');
+            throw Exception('Invalid API response: Expected a list of shops, got a Map with keys: ${data.keys}');
+          }
+        } else {
+          throw Exception('Invalid API response: Expected a list or map, got ${data.runtimeType}');
+        }
+
+        print('Extracted shop data: $shopsList');
+        if (shopsList.isNotEmpty) {
           setState(() {
-            _shops.addAll(jsonData['data']['data']); // Gộp dữ liệu mới
+            _shops.addAll(shopsList);
             _page++;
             _isLoading = false;
-            if (jsonData['data']['data'].length < 10) {
-              _hasMore = false; // Hết dữ liệu
+            print('Shops added: ${_shops.length}');
+            if (shopsList.length < 10) {
+              _hasMore = false;
             }
           });
         } else {
-          print('Invalid data structure');
+          print('No shops found in response');
           setState(() {
             _isLoading = false;
+            _hasMore = false;
           });
+          if (_shops.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('No restaurants found for selected categories')),
+            );
+          }
         }
       } else {
         print('Request failed with status: ${response.statusCode}');
         setState(() {
           _isLoading = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load restaurants: Status ${response.statusCode}')),
+        );
       }
     } catch (e) {
       print('Error fetching shops: $e');
       setState(() {
         _isLoading = false;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load restaurants: $e')),
+      );
     }
   }
 
@@ -92,9 +192,10 @@ class _HomeScreenState extends State<HomeScreen> {
         _scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent - 200) {
       _canFetch = false;
+      print('Scroll triggered _fetchShops');
       _fetchShops().then((_) {
         Future.delayed(const Duration(milliseconds: 500), () {
-          _canFetch = true; // Cho phép gọi lại sau 500ms
+          _canFetch = true;
         });
       });
     }
@@ -107,60 +208,91 @@ class _HomeScreenState extends State<HomeScreen> {
     final screenHeight = screenSize.height;
 
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: screenWidth * 0.04,
-            vertical: screenHeight * 0.01,
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: screenWidth * 0.04,
+                vertical: screenHeight * 0.01,
+              ),
+              child: CustomScrollView(
+                controller: _scrollController,
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeader(screenWidth),
+                        SizedBox(height: screenHeight * 0.02),
+                        _buildGreeting(screenWidth),
+                        SizedBox(height: screenHeight * 0.02),
+                        _buildSearchBar(),
+                        SizedBox(height: screenHeight * 0.02),
+                        _buildCategoriesSection(screenWidth, screenHeight),
+                        SizedBox(height: screenHeight * 0.02),
+                        _buildRestaurantsSectionHeader(),
+                        SizedBox(height: screenHeight * 0.01),
+                      ],
+                    ),
+                  ),
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        if (index < _shops.length) {
+                          final shop = _shops[index];
+                          print('Rendering shop: ${shop['shop_name']} with ID: ${shop['id']}');
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: screenHeight * 0.02),
+                            child: _buildRestaurantCard(
+                              screenWidth,
+                              screenHeight,
+                              shop['shop_name'] ?? 'Unknown',
+                              shop['shop_image'] ?? '',
+                              shop,
+                            ),
+                          );
+                        }
+                        if (_isLoading && _shops.isNotEmpty) {
+                          return const SizedBox.shrink();
+                        }
+                        if (!_hasMore && _shops.isEmpty) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: Text('No restaurants found'),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                      childCount: _shops.length + (_hasMore ? 1 : 0),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          child: CustomScrollView(
-            controller: _scrollController, // Sử dụng ScrollController
-            slivers: [
-              SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(screenWidth),
-                    SizedBox(height: screenHeight * 0.02),
-                    _buildGreeting(screenWidth),
-                    SizedBox(height: screenHeight * 0.02),
-                    _buildSearchBar(),
-                    SizedBox(height: screenHeight * 0.02),
-                    _buildCategoriesSection(screenWidth, screenHeight),
-                    SizedBox(height: screenHeight * 0.02),
-                    _buildRestaurantsSectionHeader(),
-                    SizedBox(height: screenHeight * 0.01),
-                  ],
+          if (_isLoading)
+            AnimatedOpacity(
+              opacity: _isLoading ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 500),
+              child: Container(
+                color: Colors.black.withOpacity(0.5),
+                child: Center(
+                  child: SizedBox(
+                    width: 60,
+                    height: 60,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 6,
+                      valueColor: AlwaysStoppedAnimation<Color>(_primaryColor),
+                      backgroundColor: Colors.white.withOpacity(0.2),
+                    ),
+                  ),
                 ),
               ),
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    if (index < _shops.length) {
-                      final shop = _shops[index];
-                      return _buildRestaurantCard(
-                        screenWidth,
-                        screenHeight,
-                        shop['shop_name'] ?? 'Unknown',
-                        shop['shop_image'] ?? '',
-                      );
-                    }
-                    if (_isLoading || _hasMore) {
-                      return const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: CircularProgressIndicator(),
-                        ),
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                  childCount: _shops.length + (_isLoading || _hasMore ? 1 : 0),
-                ),
-              ),
-            ],
-          ),
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -194,7 +326,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       secondaryAnimation,
                       child,
                     ) {
-                      const begin = Offset(1.0, 0.0); // Trượt từ phải sang trái
+                      const begin = Offset(1.0, 0.0);
                       const end = Offset.zero;
                       const curve = Curves.easeInOut;
 
@@ -262,7 +394,7 @@ class _HomeScreenState extends State<HomeScreen> {
               secondaryAnimation,
               child,
             ) {
-              const begin = Offset(1.0, 0.0); // Trượt từ phải sang trái
+              const begin = Offset(1.0, 0.0);
               const end = Offset.zero;
               const curve = Curves.easeInOut;
 
@@ -345,21 +477,43 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         _buildSectionHeader('ALL CATEGORIES', 'SEE ALL'),
         SizedBox(height: screenHeight * 0.01),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _buildCategoryChip('ALL', screenWidth, screenHeight),
-              SizedBox(width: screenWidth * 0.02),
-              _buildCategoryChip('Hot Dog', screenWidth, screenHeight),
-              SizedBox(width: screenWidth * 0.02),
-              _buildCategoryChip('Dog1', screenWidth, screenHeight),
-              SizedBox(width: screenWidth * 0.02),
-              _buildCategoryChip('Dog2', screenWidth, screenHeight),
-              SizedBox(width: screenWidth * 0.02),
-              _buildCategoryChip('Burg', screenWidth, screenHeight),
-            ],
-          ),
+        FutureBuilder<List<String>>(
+          future: _categoriesFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to load categories: ${snapshot.error}')),
+                );
+              });
+              return const Center(child: Text('Failed to load categories'));
+            }
+
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const Center(child: Text('No categories available'));
+            }
+
+            final categories = snapshot.data!;
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: categories.map<Widget>((category) {
+                  return Padding(
+                    padding: EdgeInsets.only(right: screenWidth * 0.02),
+                    child: _buildCategoryChip(
+                      category,
+                      screenWidth,
+                      screenHeight,
+                    ),
+                  );
+                }).toList(),
+              ),
+            );
+          },
         ),
       ],
     );
@@ -387,18 +541,36 @@ class _HomeScreenState extends State<HomeScreen> {
     double screenWidth,
     double screenHeight,
   ) {
-    final isSelected = _selectedCategory == label;
+    final isSelected = _selectedCategories.contains(label);
     final imagePath = _getImagePathForCategory(label);
 
     return GestureDetector(
-      onTap:
-          () => setState(() {
-            _selectedCategory = label;
-            _shops.clear();
-            _page = 1;
-            _hasMore = true;
-            _fetchShops();
-          }),
+      onTap: () {
+        setState(() {
+          if (label == 'ALL') {
+            _selectedCategories.clear();
+            _selectedCategories.add('ALL');
+          } else {
+            _selectedCategories.remove('ALL');
+            if (isSelected) {
+              _selectedCategories.remove(label);
+              if (_selectedCategories.isEmpty) {
+                _selectedCategories.add('ALL');
+              }
+            } else {
+              _selectedCategories.add(label);
+            }
+          }
+
+          print('Selected categories: $_selectedCategories');
+          _shops.clear();
+          _page = 1;
+          _hasMore = true;
+          _isLoading = false;
+          print('Calling _fetchShops from category chip');
+          _fetchShops();
+        });
+      },
       child: Container(
         padding: _chipPadding,
         decoration: BoxDecoration(
@@ -428,14 +600,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _getImagePathForCategory(String label) {
-    switch (label) {
-      case 'Hot Dog':
-        return 'assets/images/vuongsonhien.jfif';
-      case 'Dog1':
-      case 'Dog2':
-      case 'Burg':
+    switch (label.toLowerCase()) {
+      case 'cake pastry':
+        return 'assets/images/cake_pastry.png';
+      case 'vegetarian':
+        return 'assets/images/vegetarian.png';
+      case 'drink':
+        return 'assets/images/drink.png';
+      case 'hotpot':
+        return 'assets/images/hotpot.png';
+      case 'food':
+        return 'assets/images/food.png';
+      case 'all':
+        return 'assets/images/all_categories.png';
       default:
-        return 'assets/images/vuongsonhien.jfif';
+        return 'assets/images/default_category.png';
     }
   }
 
@@ -444,57 +623,100 @@ class _HomeScreenState extends State<HomeScreen> {
     double screenHeight,
     String shopName,
     String shopImage,
+    dynamic shop,
   ) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: screenHeight * 0.15,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(10),
-              ),
-              image: DecorationImage(
-                image:
-                    shopImage.isNotEmpty
-                        ? NetworkImage(shopImage)
-                        : const AssetImage('assets/images/vuongsonhien.jfif')
-                            as ImageProvider,
-                fit: BoxFit.cover,
+    // Verify the ID exists
+    final restaurantId = shop['shop_id']?.toString();
+    if (restaurantId == null) {
+      print('Warning: No ID found for shop: $shopName');
+    } else {
+      print('Navigating to RestaurantScreen with ID: $restaurantId');
+    }
+
+    return GestureDetector(
+      onTap: restaurantId != null
+          ? () {
+              Navigator.push(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) =>
+                      RestaurantScreen(restaurantId: restaurantId),
+                  transitionsBuilder: (
+                    context,
+                    animation,
+                    secondaryAnimation,
+                    child,
+                  ) {
+                    const begin = Offset(1.0, 0.0);
+                    const end = Offset.zero;
+                    const curve = Curves.easeInOut;
+
+                    var tween = Tween(
+                      begin: begin,
+                      end: end,
+                    ).chain(CurveTween(curve: curve));
+                    var offsetAnimation = animation.drive(tween);
+
+                    return SlideTransition(
+                      position: offsetAnimation,
+                      child: child,
+                    );
+                  },
+                  transitionDuration: const Duration(milliseconds: 300),
+                ),
+              );
+            }
+          : null, // Disable tap if no ID
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: screenHeight * 0.15,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(10),
+                ),
+                image: DecorationImage(
+                  image: shopImage.isNotEmpty
+                      ? NetworkImage(shopImage)
+                      : const AssetImage('assets/images/default_shop.png')
+                          as ImageProvider,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(screenWidth * 0.02),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  shopName,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: _fontFamily,
+            Padding(
+              padding: EdgeInsets.all(screenWidth * 0.02),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    shopName,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: _fontFamily,
+                    ),
                   ),
-                ),
-                SizedBox(height: screenHeight * 0.005),
-                Text(
-                  'Beverages • Snacks',
-                  style: TextStyle(
-                    fontSize: screenWidth * 0.035,
-                    color: Colors.grey[600],
+                  SizedBox(height: screenHeight * 0.005),
+                  Text(
+                    'Beverages • Snacks',
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.035,
+                      color: Colors.grey[600],
+                    ),
                   ),
-                ),
-                SizedBox(height: screenHeight * 0.01),
-                _buildRestaurantInfoRow(screenWidth),
-              ],
+                  SizedBox(height: screenHeight * 0.01),
+                  _buildRestaurantInfoRow(screenWidth),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
