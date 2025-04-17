@@ -5,6 +5,7 @@ import 'package:frontend/views/auth/login_screen.dart';
 import 'package:frontend/views/auth/register_screen.dart';
 import 'package:frontend/views/home/product_details_screen.dart';
 import 'package:frontend/views/auth/otp_verification_screen.dart';
+import 'package:frontend/views/restaurants/restaurent_screen.dart';
 
 void main() {
   runApp(const MyApp());
