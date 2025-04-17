@@ -74,6 +74,7 @@ export class RestaurantService {
     const grouped = {
       categories: categoryNames,
       shops: restaurants.map((rest) => ({
+        shop_id: rest.restaurant_id,
         shop_name: rest.name,
         shop_address: rest.street_address,
         shop_image: rest.shop_image_url,
