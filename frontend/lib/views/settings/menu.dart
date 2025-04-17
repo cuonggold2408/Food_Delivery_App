@@ -1,17 +1,88 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'address_screen.dart'; // Import màn hình Addresses
+import 'package:frontend/views/settings/add_address.dart'; // Import màn hình Addresses
+import 'package:frontend/conponents/custom_snack_bar.dart';
+import 'package:frontend/conponents/top_snack_bar.dart';
+import 'package:frontend/services/api_service.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart'; // Import ApiService
 
 // Các hằng số cho màu sắc, kích thước và khoảng cách
 const double _avatarRadius = 40.0;
 const double _spacing = 16.0;
 
-class Menu extends StatelessWidget {
+class Menu extends StatefulWidget {
   const Menu({super.key});
+
+  @override
+  State<Menu> createState() => _MenuState();
+}
+
+class _MenuState extends State<Menu> {
+  String _userName = 'Guest'; // Tên người dùng mặc định
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserProfile(); // Gọi API để lấy thông tin người dùng khi khởi tạo
+  }
+
+  Future<String?> _getAccessToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('access_token');
+  }
+
+  Future<void> _fetchUserProfile() async {
+    try {
+      final accessToken = await _getAccessToken();
+      if (accessToken == null) {
+        print('No access token found');
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse('http://10.0.2.2:3000/user/profile'),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('Profile API Status: ${response.statusCode}');
+      print('Profile API Response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        final userName = jsonData['data']['name'] ?? 'Guest';
+        setState(() {
+          _userName = userName;
+        });
+      } else {
+        print('Failed to fetch profile: Status ${response.statusCode}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load profile: Status ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      print('Error fetching profile: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching profile: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
+
+    void showSuccessSnackbar(String message) {
+      showTopSnackBar(
+        Overlay.of(context),
+        CustomSnackBar.success(message: message),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -32,8 +103,8 @@ class Menu extends StatelessWidget {
         ],
       ),
       body: SingleChildScrollView(
-        physics: const ClampingScrollPhysics(), // Tắt hiệu ứng kéo dãn
-        clipBehavior: Clip.hardEdge, // Cắt nội dung dư thừa
+        physics: const ClampingScrollPhysics(),
+        clipBehavior: Clip.hardEdge,
         child: Padding(
           padding: const EdgeInsets.all(_spacing),
           child: Column(
@@ -56,24 +127,19 @@ class Menu extends StatelessWidget {
                     icon: Icons.location_on,
                     title: 'Addresses',
                     onTap: () {
-                      // Điều hướng đến màn hình Addresses với hiệu ứng trượt từ trái sang
                       Navigator.push(
                         context,
                         PageRouteBuilder(
-                          pageBuilder:
-                              (context, animation, secondaryAnimation) =>
-                                  const AddressesScreen(),
+                          pageBuilder: (context, animation, secondaryAnimation) =>
+                              const AddAddressScreen(),
                           transitionsBuilder: (
                             context,
                             animation,
                             secondaryAnimation,
                             child,
                           ) {
-                            const begin = Offset(
-                              1.0,
-                              0.0,
-                            ); // Bắt đầu từ bên trái
-                            const end = Offset.zero; // Kết thúc ở giữa màn hình
+                            const begin = Offset(1.0, 0.0);
+                            const end = Offset.zero;
                             const curve = Curves.easeInOut;
 
                             var tween = Tween(
@@ -87,9 +153,7 @@ class Menu extends StatelessWidget {
                               child: child,
                             );
                           },
-                          transitionDuration: const Duration(
-                            milliseconds: 300,
-                          ), // Thời gian chuyển trang
+                          transitionDuration: const Duration(milliseconds: 300),
                         ),
                       );
                     },
@@ -153,8 +217,10 @@ class Menu extends StatelessWidget {
                     title: 'Log Out',
                     iconColor: Colors.red,
                     textColor: Colors.red,
-                    onTap: () {
-                      // Logic cho nút Log Out
+                    onTap: () async {
+                      await ApiService.logout();
+                      showSuccessSnackbar('Đăng xuất thành công!');
+                      Navigator.pushReplacementNamed(context, '/home');
                     },
                   ),
                 ],
@@ -180,7 +246,7 @@ class Menu extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Vishal Khadok',
+              _userName, // Hiển thị tên người dùng từ trạng thái
               style: textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -200,28 +266,27 @@ class Menu extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(_spacing),
       decoration: BoxDecoration(
-        color: const Color(0xFFF6F8FA), // Màu nền giống như trong code trước
+        color: const Color(0xFFF6F8FA),
         borderRadius: BorderRadius.circular(16.0),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.1),
             spreadRadius: 2,
             blurRadius: 5,
-            offset: const Offset(0, 3), // Hiệu ứng bóng đổ
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Column(
-        children:
-            items.map((item) {
-              return _buildMenuItem(
-                icon: item.icon,
-                title: item.title,
-                iconColor: item.iconColor,
-                textColor: item.textColor,
-                onTap: item.onTap,
-              );
-            }).toList(),
+        children: items.map((item) {
+          return _buildMenuItem(
+            icon: item.icon,
+            title: item.title,
+            iconColor: item.iconColor,
+            textColor: item.textColor,
+            onTap: item.onTap,
+          );
+        }).toList(),
       ),
     );
   }
