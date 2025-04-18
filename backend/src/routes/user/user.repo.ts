@@ -52,12 +52,12 @@ export class UserAddressRepository {
   }
 
   // Cập nhật toàn bộ address của user thành is_default = false
-  async unsetDefaultAddresses(user_id: number) {
-    await this.userAddressRepository.update(
-      { user: { user_id }, is_default: true }, // điều kiện
-      { is_default: false },
-    );
-  }
+  // async unsetDefaultAddresses(user_id: number) {
+  //   await this.userAddressRepository.update(
+  //     { user: { user_id }, is_default: true }, // điều kiện
+  //     { is_default: false },
+  //   );
+  // }
 
   // Tuỳ chọn: Lấy danh sách địa chỉ user (nếu cần check)
   async findUserAddresses(user_id: number) {
