@@ -3,27 +3,47 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { AddressLabel } from 'src/database/entities/user-address.entity';
 import { UserProfileBodyDTO } from 'src/routes/user/user.dto';
 
 import { UserAddressBodyType } from 'src/routes/user/user.model';
 import { UserAddressRepository } from 'src/routes/user/user.repo';
 
+export interface SaveAddressResponse {
+  message: string;
+  data: {
+    address_id: number;
+    address_name: string;
+    label: AddressLabel;
+    phone_number: string;
+    recipient_name: string;
+    street_address: string;
+    apartment: string;
+    // is_default: boolean;
+    latitude: number;
+    longitude: number;
+  };
+}
+
 @Injectable()
 export class UserService {
   constructor(private readonly userAddressRepository: UserAddressRepository) {}
 
-  async saveAddress(body: UserAddressBodyType, user_id: number) {
+  async saveAddress(
+    body: UserAddressBodyType,
+    user_id: number,
+  ): Promise<SaveAddressResponse> {
     const {
       address_name,
       phone_number,
       recipient_name,
       street_address,
-      postal_code,
-      is_default,
+      // is_default,
       apartment,
       latitude,
       longitude,
     } = body;
+    const label = body.label || AddressLabel.HOME;
 
     // Kiểm tra xem user có tồn tại không
     const user = await this.userAddressRepository.checkUserExists(user_id);
@@ -31,16 +51,16 @@ export class UserService {
 
     const addresses =
       await this.userAddressRepository.findUserAddresses(user_id);
-    if (addresses.length >= 3) {
+    if (addresses.length >= 5) {
       throw new BadRequestException(
-        'Bạn đã có tối đa 3 địa chỉ, không thể thêm',
+        'Bạn đã có tối đa 5 địa chỉ, không thể thêm',
       );
     }
 
     // Nếu user đánh dấu địa chỉ này là mặc định, hãy bỏ cờ mặc định của các địa chỉ cũ.
-    if (is_default) {
-      await this.userAddressRepository.unsetDefaultAddresses(user_id);
-    }
+    // if (is_default) {
+    //   await this.userAddressRepository.unsetDefaultAddresses(user_id);
+    // }
 
     // Tạo địa chỉ mới
     const newAddress = await this.userAddressRepository.createAddress(
@@ -48,9 +68,9 @@ export class UserService {
         address_name,
         phone_number,
         recipient_name,
+        label,
         street_address,
-        postal_code,
-        is_default,
+        // is_default,
         apartment,
         latitude,
         longitude,
@@ -61,9 +81,15 @@ export class UserService {
     return {
       message: 'Lưu địa chỉ thành công',
       data: {
-        ...newAddress,
-        user: undefined,
-        user_id: newAddress.user.user_id,
+        address_id: newAddress.address_id,
+        address_name: newAddress.address_name,
+        label: newAddress.label,
+        phone_number: newAddress.phone_number,
+        recipient_name: newAddress.recipient_name,
+        street_address: newAddress.street_address,
+        apartment: newAddress.apartment,
+        latitude: newAddress.latitude,
+        longitude: newAddress.longitude,
       },
     };
   }

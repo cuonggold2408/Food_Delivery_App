@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:frontend/views/settings/menu.dart';
 import 'package:frontend/views/settings/add_address.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -13,6 +13,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  String _userName = 'Guest';
+  bool _isLoggedIn = false;
   final Set<String> _selectedCategories = {'ALL'};
   final List<dynamic> _shops = [];
   int _page = 1;
@@ -35,12 +37,28 @@ class _HomeScreenState extends State<HomeScreen> {
     _categoriesFuture = _fetchCategories();
     _fetchShops();
     _scrollController.addListener(_onScroll);
+    _checkLoginStatus();
+    _fetchUserProfile();
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  // Hàm kiểm tra trạng thái đăng nhập
+  Future<void> _checkLoginStatus() async {
+    final accessToken = await _getAccessToken();
+    setState(() {
+      _isLoggedIn = accessToken != null;
+    });
+  }
+
+  // Hàm lấy accessToken từ SharedPreferences
+  Future<String?> _getAccessToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('access_token');
   }
 
   // Hàm tiện ích để viết hoa chữ cái đầu mỗi từ
@@ -52,6 +70,45 @@ class _HomeScreenState extends State<HomeScreen> {
             ? '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}'
             : '')
         .join(' ');
+  }
+
+  Future<void> _fetchUserProfile() async {
+    try {
+      final accessToken = await _getAccessToken();
+      if (accessToken == null) {
+        print('No access token found');
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse('http://10.0.2.2:3000/user/profile'),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('Profile API Status: ${response.statusCode}');
+      print('Profile API Response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        final userName = jsonData['data']['name'] ?? 'Guest';
+        setState(() {
+          _userName = userName;
+        });
+      } else {
+        print('Failed to fetch profile: Status ${response.statusCode}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load profile: Status ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      print('Error fetching profile: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching profile: $e')),
+      );
+    }
   }
 
   Future<List<String>> _fetchCategories() async {
@@ -317,9 +374,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.push(
                   context,
                   PageRouteBuilder(
-                    pageBuilder:
-                        (context, animation, secondaryAnimation) =>
-                            const AddAddressScreen(),
+                    pageBuilder: (context, animation, secondaryAnimation) =>
+                        const AddAddressScreen(),
                     transitionsBuilder: (
                       context,
                       animation,
@@ -375,7 +431,28 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        _buildNotificationIcon(),
+        Row(
+          children: [
+            if (_isLoggedIn) _buildNotificationIcon(),
+            if (!_isLoggedIn)
+              TextButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/login').then((_) {
+                    _checkLoginStatus();
+                    _fetchUserProfile();
+                  });
+                },
+                child: const Text(
+                  'Login',
+                  style: TextStyle(
+                    color: _primaryColor,
+                    fontSize: 16,
+                    fontFamily: _fontFamily,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ],
     );
   }
@@ -386,8 +463,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.push(
           context,
           PageRouteBuilder(
-            pageBuilder:
-                (context, animation, secondaryAnimation) => const Menu(),
+            pageBuilder: (context, animation, secondaryAnimation) => const Menu(),
             transitionsBuilder: (
               context,
               animation,
@@ -447,7 +523,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildGreeting(double screenWidth) {
     return Text(
-      'Hey Halal, Good Afternoon!',
+      'Hey $_userName, Good Afternoon!',
       style: TextStyle(
         fontSize: screenWidth * 0.06,
         fontWeight: FontWeight.bold,
@@ -625,7 +701,6 @@ class _HomeScreenState extends State<HomeScreen> {
     String shopImage,
     dynamic shop,
   ) {
-    // Verify the ID exists
     final restaurantId = shop['shop_id']?.toString();
     if (restaurantId == null) {
       print('Warning: No ID found for shop: $shopName');
@@ -666,7 +741,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               );
             }
-          : null, // Disable tap if no ID
+          : null,
       child: Card(
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
