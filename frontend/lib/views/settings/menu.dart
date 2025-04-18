@@ -1,12 +1,17 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+
+import 'package:frontend/views/settings/profile_screen.dart';
+import 'address_screen.dart'; // Import màn hình Addresses
+
 import 'package:frontend/views/settings/add_address.dart'; // Import màn hình Addresses
 import 'package:frontend/conponents/custom_snack_bar.dart';
 import 'package:frontend/conponents/top_snack_bar.dart';
 import 'package:frontend/services/api_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart'; // Import ApiService
+
 
 // Các hằng số cho màu sắc, kích thước và khoảng cách
 const double _avatarRadius = 40.0;
@@ -121,6 +126,41 @@ class _MenuState extends State<Menu> {
                     title: 'Personal Info',
                     onTap: () {
                       // Điều hướng đến màn hình Personal Info
+                      Navigator.push(
+                        context,
+                        PageRouteBuilder(
+                          pageBuilder:
+                              (context, animation, secondaryAnimation) =>
+                                  const ProfileScreen(),
+                          transitionsBuilder: (
+                            context,
+                            animation,
+                            secondaryAnimation,
+                            child,
+                          ) {
+                            const begin = Offset(
+                              1.0,
+                              0.0,
+                            ); // Bắt đầu từ bên trái
+                            const end = Offset.zero; // Kết thúc ở giữa màn hình
+                            const curve = Curves.easeInOut;
+
+                            var tween = Tween(
+                              begin: begin,
+                              end: end,
+                            ).chain(CurveTween(curve: curve));
+                            var offsetAnimation = animation.drive(tween);
+
+                            return SlideTransition(
+                              position: offsetAnimation,
+                              child: child,
+                            );
+                          },
+                          transitionDuration: const Duration(
+                            milliseconds: 300,
+                          ), // Thời gian chuyển trang
+                        ),
+                      );
                     },
                   ),
                   _MenuItemData(
