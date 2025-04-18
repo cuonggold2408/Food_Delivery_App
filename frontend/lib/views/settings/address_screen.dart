@@ -11,8 +11,7 @@ class Address {
   final String? apartment;
   final String recipientName;
   final String phoneNumber;
-  final String postalCode;
-  final bool isDefault;
+  // final bool isDefault;
   final String latitude;
   final String longitude;
   final DateTime createdAt;
@@ -28,16 +27,16 @@ class Address {
     this.apartment,
     required this.recipientName,
     required this.phoneNumber,
-    required this.postalCode,
-    required this.isDefault,
+    // required this.isDefault,
     required this.latitude,
     required this.longitude,
     required this.createdAt,
     required this.updatedAt,
     required this.icon,
     required this.iconColor,
+    required this.label,
   });
-
+  // xóa isDefault
   factory Address.fromJson(Map<String, dynamic> json) {
     return Address(
       id: json['address_id'],
@@ -46,12 +45,13 @@ class Address {
       apartment: json['apartment'],
       recipientName: json['recipient_name'],
       phoneNumber: json['phone_number'],
-      postalCode: json['postal_code'],
-      isDefault: json['is_default'],
+      // isDefault: json['is_default'],
       latitude: json['latitude'],
       longitude: json['longitude'],
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
+      label: json['label'],
+
       // Sử dụng address_name thay vì label tĩnh để xác định icon
       icon:
           json['label'].toLowerCase().contains('home')

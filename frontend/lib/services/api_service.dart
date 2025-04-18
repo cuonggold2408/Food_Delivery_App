@@ -82,10 +82,7 @@ class ApiService {
         final data = response.data as Map<String, dynamic>;
         // Kiểm tra xem accessToken có tồn tại trong response hay không
         if (data['data'] == null) {
-          return {
-            'success': false,
-            'error': 'Thiếu dữ liệu trong response',
-          };
+          return {'success': false, 'error': 'Thiếu dữ liệu trong response'};
         }
         if (data['data']?['accessToken'] == null) {
           return {
@@ -160,7 +157,7 @@ class ApiService {
         '/auth/send-otp',
         data: jsonEncode({'email': email, 'type': type}),
       );
-        
+
       if (response.statusCode == 201) {
         return {'success': true, 'data': response.data};
       }
@@ -205,9 +202,7 @@ class ApiService {
     return prefs.containsKey('auth_token');
   }
 
-
   // Hàm lấy thông tin user profile
-  
 
   // Hàm lấy danh sách categories
   static Future<Map<String, dynamic>> getCategories() async {
@@ -245,5 +240,11 @@ class ApiService {
     } on DioException catch (e) {
       return {'success': false, 'error': e.message};
     }
+  }
+
+  static Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('auth_token');
+    // return prefs.containsKey('auth_token');
   }
 }
