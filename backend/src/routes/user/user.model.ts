@@ -9,9 +9,8 @@ export const UserAddressBodySchema = UserAddressSchema.pick({
   phone_number: true,
   recipient_name: true,
   street_address: true,
-  postal_code: true,
+  label: true,
   apartment: true,
-  is_default: true,
   latitude: true,
   longitude: true,
 }).strict();
