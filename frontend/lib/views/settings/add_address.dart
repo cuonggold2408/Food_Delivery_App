@@ -16,7 +16,7 @@ Future<void> saveAddress({
   required String apartment,
   required String recipientName,
   required String phoneNumber,
-  required String postalCode,
+  // required String postalCode,
   required String latitude,
   required String longitude,
   required String token,
@@ -38,9 +38,10 @@ Future<void> saveAddress({
     'apartment': apartment,
     'recipient_name': recipientName,
     'phone_number': phoneNumber,
-    'postal_code': postalCode,
+    // 'postal_code': postalCode,
     'latitude': latitude,
     'longitude': longitude,
+    'label': label,
   });
 
   try {
@@ -421,7 +422,7 @@ class _MapSectionState extends State<MapSection> {
           placemark.street,
           placemark.locality,
           placemark.administrativeArea,
-          placemark.postalCode,
+          // placemark.postalCode,
           placemark.country,
         ].where((element) => element != null && element.isNotEmpty).join(', ');
 
@@ -864,7 +865,7 @@ class _SaveButtonState extends State<SaveButton> {
                     final latitude = latLng.latitude.toString();
                     final longitude = latLng.longitude.toString();
 
-                    const postalCode = '123'; // Giá trị mặc định hoặc lấy từ UI
+                    // const postalCode = '123'; // Giá trị mặc định hoặc lấy từ UI
 
                     // Lấy addressId từ widget.address (nếu có)
                     final addressId = widget.address?.id;
@@ -876,10 +877,11 @@ class _SaveButtonState extends State<SaveButton> {
                       apartment: apartment,
                       recipientName: recipientName,
                       phoneNumber: phoneNumber,
-                      postalCode: postalCode,
+                      // postalCode: postalCode,
                       latitude: latitude,
                       longitude: longitude,
                       token: token,
+                      label: widget.label,
                     );
 
                     if (mounted) {
