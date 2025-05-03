@@ -11,6 +11,7 @@ import { HttpExceptionFilter } from 'src/shared/filters/http-exception.filter';
 import { AuthModule } from 'src/routes/auth/auth.module';
 import { UserModule } from './routes/user/user.module';
 import { RestaurantModule } from 'src/routes/restaurant/restaurant.module';
+import { SearchModule } from './routes/search/search.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { RestaurantModule } from 'src/routes/restaurant/restaurant.module';
       isGlobal: true,
     }),
     RestaurantModule,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [
