@@ -11,10 +11,6 @@ export class ItemCustomizationCategory {
 
   @PrimaryColumn({ name: 'category_id' })
   categoryId: string;
-  itemId: number;
-
-  @PrimaryColumn({ name: 'category_id' })
-  categoryId: number;
 
   /* ---------- Relations ---------- */
   @ManyToOne(() => MenuItem, (i) => i.item_id, { onDelete: 'CASCADE' })

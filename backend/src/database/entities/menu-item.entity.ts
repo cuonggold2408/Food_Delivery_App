@@ -1,6 +1,5 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
   ManyToOne,
   JoinColumn,
@@ -16,8 +15,6 @@ import { ItemCustomizationCategory } from 'src/database/entities/restaurant/cate
 export class MenuItem {
   @PrimaryColumn()
   item_id: string;
-  @PrimaryGeneratedColumn()
-  item_id: number;
 
   @ManyToOne(() => Restaurant, (restaurant) => restaurant.menuItems, {
     onDelete: 'CASCADE',

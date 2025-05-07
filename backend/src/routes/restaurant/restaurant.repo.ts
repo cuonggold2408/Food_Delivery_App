@@ -121,9 +121,9 @@ export class RestaurantRepository {
       throw new NotFoundException('Không tìm thấy nhà hàng');
     }
 
-    const dishArr = restaurant.menuItems.filter(
-      (item) => +item.item_id === +id,
-    );
+    console.log('restaurant: ', restaurant);
+
+    const dishArr = restaurant.menuItems.filter((item) => item.item_id === id);
     if (dishArr.length === 0) {
       throw new NotFoundException('Không tìm thấy món ăn');
     }
