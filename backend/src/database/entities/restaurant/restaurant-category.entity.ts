@@ -1,17 +1,17 @@
 import { RestaurantCategoryMapping } from 'src/database/entities/restaurant/restaurant-category-mapping.entity';
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  PrimaryColumn,
 } from 'typeorm';
 
 @Entity('restaurant_categories')
 export class RestaurantCategory {
-  @PrimaryGeneratedColumn()
-  category_id: number;
+  @PrimaryColumn()
+  category_id: string;
 
   @Column({ type: 'varchar', length: 100 })
   name: string;

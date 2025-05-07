@@ -26,9 +26,12 @@ export class RestaurantService {
     const result = restaurants.map((rest) => ({
       shop_id: rest.restaurant_id,
       shop_name: rest.name,
-      shop_address: rest.street_address,
       shop_image: rest.shop_image_url,
       city: rest.city,
+      langitude: rest.longitude,
+      latitude: rest.latitude,
+      rating: rest.rating,
+      shop_active: rest.is_active,
       products: rest.menuItems.map((item) => ({
         product_name: item.name,
         product_desc: item.description,
@@ -76,9 +79,12 @@ export class RestaurantService {
       shops: restaurants.map((rest) => ({
         shop_id: rest.restaurant_id,
         shop_name: rest.name,
-        shop_address: rest.street_address,
         shop_image: rest.shop_image_url,
         city: rest.city,
+        longtitude: rest.longitude,
+        latitude: rest.latitude,
+        rating: rest.rating,
+
         products: rest.menuItems.map((item) => ({
           product_name: item.name,
           product_desc: item.description,
@@ -95,19 +101,15 @@ export class RestaurantService {
     };
   }
 
-  async getRestaurantById(id: number) {
-    const restaurant = await this.restaurantRepository.getRestaurantById(id);
-    return {
-      ...restaurant,
-      restaurant_id: undefined,
-      menuItems: restaurant.menuItems.map((item) => ({
-        product_name: item.name,
-        product_desc: item.description,
-        product_price: item.price,
-        product_image: item.image_url,
-        product_is_available: item.is_available,
-      })),
-    };
+  async getRestaurantById(id: string) {
+    return await this.restaurantRepository.getRestaurantById(id);
+  }
+
+  async getRestaurantByIdAndByCategory(categoryName: string, id: string) {
+    return await this.restaurantRepository.getRestaurantByIdAndByCategory(
+      categoryName,
+      id,
+    );
   }
 
   async getAllCategories() {
@@ -119,5 +121,30 @@ export class RestaurantService {
         category_image: category.image_url,
       })),
     };
+  }
+
+  async getItemsByRestaurantId(id: string, restaurantId: string) {
+    return await this.restaurantRepository.getItemsByRestaurantId(
+      id,
+      restaurantId,
+    );
+  }
+
+  async getFavoriteRestaurants(userId: number) {
+    return await this.restaurantRepository.getFavoriteRestaurants(userId);
+  }
+
+  async addFavoriteRestaurant(userId: number, restaurantId: string) {
+    return await this.restaurantRepository.addFavoriteRestaurant(
+      userId,
+      restaurantId,
+    );
+  }
+
+  async removeFavoriteRestaurant(userId: number, restaurantId: string) {
+    return await this.restaurantRepository.removeFavoriteRestaurant(
+      userId,
+      restaurantId,
+    );
   }
 }

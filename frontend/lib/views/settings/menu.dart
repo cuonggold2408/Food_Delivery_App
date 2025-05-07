@@ -12,7 +12,6 @@ import 'package:frontend/services/api_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart'; // Import ApiService
 
-
 // Các hằng số cho màu sắc, kích thước và khoảng cách
 const double _avatarRadius = 40.0;
 const double _spacing = 16.0;
@@ -66,14 +65,18 @@ class _MenuState extends State<Menu> {
       } else {
         print('Failed to fetch profile: Status ${response.statusCode}');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load profile: Status ${response.statusCode}')),
+          SnackBar(
+            content: Text(
+              'Failed to load profile: Status ${response.statusCode}',
+            ),
+          ),
         );
       }
     } catch (e) {
       print('Error fetching profile: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching profile: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error fetching profile: $e')));
     }
   }
 
@@ -170,8 +173,9 @@ class _MenuState extends State<Menu> {
                       Navigator.push(
                         context,
                         PageRouteBuilder(
-                          pageBuilder: (context, animation, secondaryAnimation) =>
-                              const AddAddressScreen(),
+                          pageBuilder:
+                              (context, animation, secondaryAnimation) =>
+                                  const AddressesScreen(),
                           transitionsBuilder: (
                             context,
                             animation,
@@ -318,15 +322,16 @@ class _MenuState extends State<Menu> {
         ],
       ),
       child: Column(
-        children: items.map((item) {
-          return _buildMenuItem(
-            icon: item.icon,
-            title: item.title,
-            iconColor: item.iconColor,
-            textColor: item.textColor,
-            onTap: item.onTap,
-          );
-        }).toList(),
+        children:
+            items.map((item) {
+              return _buildMenuItem(
+                icon: item.icon,
+                title: item.title,
+                iconColor: item.iconColor,
+                textColor: item.textColor,
+                onTap: item.onTap,
+              );
+            }).toList(),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import { AuthProvider } from 'src/database/entities/auth-provider.entity';
+import { UserFavoriteRestaurant } from 'src/database/entities/restaurant/favorite/user-favorite.entity';
 import { UserAddress } from 'src/database/entities/user-address.entity';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
@@ -40,4 +41,7 @@ export class User {
 
   @OneToMany(() => UserAddress, (UserAddress) => UserAddress.user)
   user_address: UserAddress[];
+
+  @OneToMany(() => UserFavoriteRestaurant, (favorite) => favorite.user)
+  user_favorite_restaurants: UserFavoriteRestaurant[];
 }
