@@ -242,9 +242,11 @@ class ApiService {
     }
   }
 
+
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('auth_token');
     // return prefs.containsKey('auth_token');
   }
+
 }

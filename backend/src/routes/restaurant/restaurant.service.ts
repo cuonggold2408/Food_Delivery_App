@@ -101,11 +101,11 @@ export class RestaurantService {
     };
   }
 
-  async getRestaurantById(id: number) {
+  async getRestaurantById(id: string) {
     return await this.restaurantRepository.getRestaurantById(id);
   }
 
-  async getRestaurantByIdAndByCategory(categoryName: string, id: number) {
+  async getRestaurantByIdAndByCategory(categoryName: string, id: string) {
     return await this.restaurantRepository.getRestaurantByIdAndByCategory(
       categoryName,
       id,
@@ -123,7 +123,7 @@ export class RestaurantService {
     };
   }
 
-  async getItemsByRestaurantId(id: number, restaurantId: number) {
+  async getItemsByRestaurantId(id: string, restaurantId: string) {
     return await this.restaurantRepository.getItemsByRestaurantId(
       id,
       restaurantId,
@@ -134,14 +134,14 @@ export class RestaurantService {
     return await this.restaurantRepository.getFavoriteRestaurants(userId);
   }
 
-  async addFavoriteRestaurant(userId: number, restaurantId: number) {
+  async addFavoriteRestaurant(userId: number, restaurantId: string) {
     return await this.restaurantRepository.addFavoriteRestaurant(
       userId,
       restaurantId,
     );
   }
 
-  async removeFavoriteRestaurant(userId: number, restaurantId: number) {
+  async removeFavoriteRestaurant(userId: number, restaurantId: string) {
     return await this.restaurantRepository.removeFavoriteRestaurant(
       userId,
       restaurantId,

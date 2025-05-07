@@ -6,6 +6,7 @@ import {
   JoinColumn,
   OneToMany,
   Index,
+  PrimaryColumn,
 } from 'typeorm';
 import { Restaurant } from 'src/database/entities/restaurant/restaurant.entity';
 import { MenuCategory } from 'src/database/entities/restaurant/category/menu-categories.entity';
@@ -13,6 +14,8 @@ import { ItemCustomizationCategory } from 'src/database/entities/restaurant/cate
 
 @Entity('menu_items')
 export class MenuItem {
+  @PrimaryColumn()
+  item_id: string;
   @PrimaryGeneratedColumn()
   item_id: number;
 

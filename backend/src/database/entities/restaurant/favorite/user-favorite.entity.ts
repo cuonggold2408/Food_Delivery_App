@@ -14,7 +14,7 @@ export class UserFavoriteRestaurant {
   user_id: number;
 
   @PrimaryColumn()
-  restaurant_id: number;
+  restaurant_id: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })

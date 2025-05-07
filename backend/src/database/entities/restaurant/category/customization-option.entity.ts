@@ -1,4 +1,10 @@
 import { CustomizationCategory } from 'src/database/entities/restaurant/category/customization-category.entity';
+import { Entity, Column, ManyToOne, JoinColumn, PrimaryColumn } from 'typeorm';
+
+@Entity({ name: 'customization_options' })
+export class CustomizationOption {
+  @PrimaryColumn({ name: 'option_id' })
+  optionId: string;
 import {
   Entity,
   PrimaryGeneratedColumn,

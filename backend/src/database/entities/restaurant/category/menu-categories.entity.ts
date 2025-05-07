@@ -8,10 +8,13 @@ import {
   JoinColumn,
   OneToMany,
   Index,
+  PrimaryColumn,
 } from 'typeorm';
 
 @Entity({ name: 'menu_categories' })
 export class MenuCategory {
+  @PrimaryColumn({ name: 'category_id' })
+  categoryId: string;
   @PrimaryGeneratedColumn({ name: 'category_id' })
   categoryId: number;
 
