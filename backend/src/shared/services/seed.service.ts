@@ -4,9 +4,16 @@ import { Repository } from 'typeorm';
 import { MenuItem } from 'src/database/entities/menu-item.entity';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as unzipper from 'unzipper';
 import { Restaurant } from 'src/database/entities/restaurant/restaurant.entity';
 import { RestaurantCategory } from 'src/database/entities/restaurant/restaurant-category.entity';
 import { RestaurantCategoryMapping } from 'src/database/entities/restaurant/restaurant-category-mapping.entity';
+import { Promotion } from 'src/database/entities/restaurant/promotions/promotion.entity';
+import { CustomizationCategory } from 'src/database/entities/restaurant/category/customization-category.entity';
+import { CustomizationOption } from 'src/database/entities/restaurant/category/customization-option.entity';
+import { ItemCustomizationCategory } from 'src/database/entities/restaurant/category/item-customization-category.entity';
+import { MenuCategory } from 'src/database/entities/restaurant/category/menu-categories.entity';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class SeedService {
@@ -22,64 +29,186 @@ export class SeedService {
 
     @InjectRepository(RestaurantCategoryMapping)
     private readonly categoryMappingRepo: Repository<RestaurantCategoryMapping>,
+
+    @InjectRepository(Promotion)
+    private readonly promotionRepo: Repository<Promotion>,
+
+    @InjectRepository(CustomizationCategory)
+    private readonly customizationCategoryRepo: Repository<CustomizationCategory>,
+
+    @InjectRepository(CustomizationOption)
+    private readonly customizationOptionRepo: Repository<CustomizationOption>,
+
+    @InjectRepository(ItemCustomizationCategory)
+    private readonly itemCustomizationCategoryRepo: Repository<ItemCustomizationCategory>,
+
+    @InjectRepository(MenuCategory)
+    private readonly menuCategoryRepo: Repository<MenuCategory>,
   ) {}
 
   async importData() {
-    const filePath = path.join(process.cwd(), 'data', 'data_processed.json');
-    const jsonData = fs.readFileSync(filePath, 'utf8');
+    await this.restaurantRepo.query(`CREATE EXTENSION IF NOT EXISTS unaccent`);
+    //  Bước 1: Giải nén zip
+    const zipPath = path.join(process.cwd(), 'data', 'data_app.zip');
+    const extractPath = path.join(process.cwd(), 'data', 'extracted');
+
+    if (!fs.existsSync(extractPath)) {
+      fs.mkdirSync(extractPath, { recursive: true });
+    }
+
+    await fs
+      .createReadStream(zipPath)
+      .pipe(unzipper.Extract({ path: extractPath }))
+      .promise();
+
+    // Bước 2: Đọc file JSON đã giải nén
+    const jsonPath = path.join(extractPath, 'data_app.json');
+    const jsonData = fs.readFileSync(jsonPath, 'utf8');
     const cities: any[] = JSON.parse(jsonData);
 
     for (const cityData of cities) {
       const city = cityData.city;
 
       for (const category of cityData.categories) {
-        // 1. Lưu hoặc tìm category
+        // Tạo/tìm category
         let categoryEntity = await this.categoryRepo.findOne({
-          where: { name: category.category_name },
+          where: { name: category.category },
         });
+
         if (!categoryEntity) {
           categoryEntity = this.categoryRepo.create({
-            name: category.category_name,
-            image_url: category.category_image || '',
+            category_id: uuidv4(),
+            name: category.category,
+            image_url: category.url_category_image || '',
           });
           categoryEntity = await this.categoryRepo.save(categoryEntity);
         }
 
         for (const shop of category.shops) {
-          const restaurantEntity = new Restaurant();
-          restaurantEntity.name = shop.shop_name;
-          restaurantEntity.street_address = shop.shop_address;
-          restaurantEntity.city = city;
-          restaurantEntity.shop_image_url = shop.shop_image;
+          const merchant = shop.merchant;
 
-          const savedRestaurant =
-            await this.restaurantRepo.save(restaurantEntity);
+          // Tạo restaurant
+          const restaurant = this.restaurantRepo.create({
+            restaurant_id: merchant.ID,
+            name: merchant.name,
+            city: city,
+            shop_image_url: merchant.photoHref,
+            longitude: merchant.latlng.longitude,
+            latitude: merchant.latlng.latitude,
+            rating: merchant.rating,
+          });
+          const savedRestaurant = await this.restaurantRepo.save(restaurant);
 
-          // 2. Mapping restaurant với category
+          // Mapping restaurant - category
           const mapping = this.categoryMappingRepo.create({
             restaurant_id: savedRestaurant.restaurant_id,
             category_id: categoryEntity.category_id,
           });
           await this.categoryMappingRepo.save(mapping);
 
-          // 3. Insert menu items
-          if (shop.products && shop.products.length > 0) {
-            const menuItems = shop.products.map((product) => {
-              const menuItem = new MenuItem();
-              menuItem.name = product.product_name;
-              menuItem.description = product.product_desc || '';
-              menuItem.price = product.product_price;
-              menuItem.image_url = product.product_image;
-              menuItem.restaurant = savedRestaurant;
-              return menuItem;
-            });
+          // Insert promotions nếu có
+          if (merchant.promotions?.length > 0) {
+            const promotions = merchant.promotions.map((promo) =>
+              this.promotionRepo.create({
+                title: promo.title,
+                promoCode: promo.promo_code,
+                description: promo.description,
+                discountType: promo.discount_type,
+                discountValue: promo.discount_value.toString(),
+                minOrderValue: promo.min_order_value?.toString() || '0',
+                maxDiscountAmount: promo.max_discount_amount?.toString(),
+                startDate: new Date(promo.start_date),
+                endDate: new Date(promo.end_date),
+                restaurant: savedRestaurant,
+              }),
+            );
+            await this.promotionRepo.save(promotions);
+          }
 
-            await this.menuItemRepo.save(menuItems);
+          // Insert menu items từ menu.categories[].items
+          if (merchant.menu?.categories?.length > 0) {
+            for (const itemCategory of merchant.menu.categories) {
+              // Tạo hoặc lấy menu category
+              let menuCategoryEntity = await this.menuCategoryRepo.findOne({
+                where: {
+                  name: itemCategory.name,
+                  restaurant: savedRestaurant,
+                },
+              });
+
+              if (!menuCategoryEntity) {
+                menuCategoryEntity = this.menuCategoryRepo.create({
+                  categoryId: itemCategory.ID,
+                  name: itemCategory.name,
+                  restaurant: savedRestaurant,
+                });
+                menuCategoryEntity =
+                  await this.menuCategoryRepo.save(menuCategoryEntity);
+              }
+
+              // Duyệt menu item
+              for (const item of itemCategory.items || []) {
+                if (!item.available) continue;
+
+                const menuItem = this.menuItemRepo.create({
+                  item_id: item.ID,
+                  name: item.name,
+                  description: item.description || '',
+                  price: item.priceInMinorUnit ?? 0,
+                  image_url:
+                    item.imgHref ||
+                    'https://inkythuatso.com/uploads/thumbnails/800/2021/12/logo-grab-food-inkythuatso-20-15-57-46.jpg',
+                  restaurant: savedRestaurant,
+                  menuCategory: menuCategoryEntity,
+                });
+                const savedItem = await this.menuItemRepo.save(menuItem);
+
+                // Duyệt modifierGroups (customizations)
+                for (const group of item.modifierGroups || []) {
+                  const customizationCategory =
+                    this.customizationCategoryRepo.create({
+                      categoryId: group.ID,
+                      name: group.name,
+                      restaurantId: savedRestaurant,
+                      minSelections: group.selectionType ?? 0,
+                      maxSelections: group.selectionRangeMax ?? 1,
+                      available: group.available ?? true,
+                    });
+                  const savedCategory =
+                    await this.customizationCategoryRepo.save(
+                      customizationCategory,
+                    );
+
+                  // Mapping item <-> customizationCategory
+                  const itemCustomization =
+                    this.itemCustomizationCategoryRepo.create({
+                      itemId: savedItem.item_id,
+                      categoryId: savedCategory.categoryId,
+                    });
+                  await this.itemCustomizationCategoryRepo.save(
+                    itemCustomization,
+                  );
+
+                  // Insert customization options
+                  const options = (group.modifiers || []).map((mod) =>
+                    this.customizationOptionRepo.create({
+                      optionId: mod.ID,
+                      name: mod.name,
+                      additionalPrice: mod.priceInMinorUnit?.toString() || '0',
+                      categoryId: savedCategory,
+                      available: mod.available ?? true,
+                    }),
+                  );
+                  await this.customizationOptionRepo.save(options);
+                }
+              }
+            }
           }
         }
       }
     }
-    console.log('Import done successfully');
+
+    console.log('✅ Data import completed');
 
     return;
   }

@@ -3,6 +3,11 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MenuItem } from 'src/database/entities/menu-item.entity';
+import { CustomizationCategory } from 'src/database/entities/restaurant/category/customization-category.entity';
+import { CustomizationOption } from 'src/database/entities/restaurant/category/customization-option.entity';
+import { ItemCustomizationCategory } from 'src/database/entities/restaurant/category/item-customization-category.entity';
+import { MenuCategory } from 'src/database/entities/restaurant/category/menu-categories.entity';
+import { Promotion } from 'src/database/entities/restaurant/promotions/promotion.entity';
 import { RestaurantCategoryMapping } from 'src/database/entities/restaurant/restaurant-category-mapping.entity';
 import { RestaurantCategory } from 'src/database/entities/restaurant/restaurant-category.entity';
 import { Restaurant } from 'src/database/entities/restaurant/restaurant.entity';
@@ -44,6 +49,11 @@ const sharedServices = [
       MenuItem,
       RestaurantCategory,
       RestaurantCategoryMapping,
+      Promotion,
+      CustomizationOption,
+      CustomizationCategory,
+      ItemCustomizationCategory,
+      MenuCategory,
     ]),
   ],
 })
