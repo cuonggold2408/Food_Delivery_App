@@ -5,6 +5,18 @@ import { Entity, Column, ManyToOne, JoinColumn, PrimaryColumn } from 'typeorm';
 export class CustomizationOption {
   @PrimaryColumn({ name: 'option_id' })
   optionId: string;
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
+
+@Entity({ name: 'customization_options' })
+export class CustomizationOption {
+  @PrimaryGeneratedColumn({ name: 'option_id' })
+  optionId: number;
 
   @ManyToOne(() => CustomizationCategory, (c) => c.categoryId, {
     onDelete: 'CASCADE',

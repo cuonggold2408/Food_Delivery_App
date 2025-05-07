@@ -2,6 +2,7 @@ import { CustomizationOption } from 'src/database/entities/restaurant/category/c
 import { Restaurant } from 'src/database/entities/restaurant/restaurant.entity';
 import {
   Entity,
+  PrimaryGeneratedColumn,
   Column,
   ManyToOne,
   JoinColumn,
@@ -13,6 +14,8 @@ import {
 export class CustomizationCategory {
   @PrimaryColumn({ name: 'category_id' })
   categoryId: string;
+  @PrimaryGeneratedColumn({ name: 'category_id' })
+  categoryId: number;
 
   @ManyToOne(() => Restaurant, (r) => r.restaurant_id, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'restaurant_id' })
