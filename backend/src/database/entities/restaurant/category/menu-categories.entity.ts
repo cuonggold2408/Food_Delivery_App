@@ -2,6 +2,7 @@ import { MenuItem } from 'src/database/entities/menu-item.entity';
 import { Restaurant } from 'src/database/entities/restaurant/restaurant.entity';
 import {
   Entity,
+  PrimaryGeneratedColumn,
   Column,
   ManyToOne,
   JoinColumn,
@@ -14,6 +15,8 @@ import {
 export class MenuCategory {
   @PrimaryColumn({ name: 'category_id' })
   categoryId: string;
+  @PrimaryGeneratedColumn({ name: 'category_id' })
+  categoryId: number;
 
   @Index()
   @Column({ length: 100, nullable: false })
