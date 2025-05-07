@@ -7,10 +7,13 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
+  PrimaryColumn,
 } from 'typeorm';
 
 @Entity({ name: 'customization_categories' })
 export class CustomizationCategory {
+  @PrimaryColumn({ name: 'category_id' })
+  categoryId: string;
   @PrimaryGeneratedColumn({ name: 'category_id' })
   categoryId: number;
 

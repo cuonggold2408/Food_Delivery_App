@@ -7,6 +7,10 @@ import { CustomizationCategory } from 'src/database/entities/restaurant/category
 export class ItemCustomizationCategory {
   /* ---------- Composite PK columns ---------- */
   @PrimaryColumn({ name: 'item_id' })
+  itemId: string;
+
+  @PrimaryColumn({ name: 'category_id' })
+  categoryId: string;
   itemId: number;
 
   @PrimaryColumn({ name: 'category_id' })

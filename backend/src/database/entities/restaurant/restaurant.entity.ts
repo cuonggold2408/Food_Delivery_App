@@ -2,19 +2,13 @@ import { MenuItem } from 'src/database/entities/menu-item.entity';
 import { MenuCategory } from 'src/database/entities/restaurant/category/menu-categories.entity';
 import { UserFavoriteRestaurant } from 'src/database/entities/restaurant/favorite/user-favorite.entity';
 import { RestaurantCategoryMapping } from 'src/database/entities/restaurant/restaurant-category-mapping.entity';
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  OneToMany,
-  Index,
-} from 'typeorm';
+import { Entity, Column, OneToMany, Index, PrimaryColumn } from 'typeorm';
 
 @Entity('restaurants')
 @Index(['name', 'city'])
 export class Restaurant {
-  @PrimaryGeneratedColumn()
-  restaurant_id: number;
+  @PrimaryColumn()
+  restaurant_id: string;
 
   @Column({ type: 'varchar', length: 255 })
   name: string;

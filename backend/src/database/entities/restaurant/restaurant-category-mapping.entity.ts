@@ -5,10 +5,10 @@ import { RestaurantCategory } from './restaurant-category.entity';
 @Entity('restaurant_category_mappings')
 export class RestaurantCategoryMapping {
   @PrimaryColumn()
-  restaurant_id: number;
+  restaurant_id: string;
 
   @PrimaryColumn()
-  category_id: number;
+  category_id: string;
 
   @ManyToOne(() => Restaurant, (restaurant) => restaurant.mappings, {
     onDelete: 'CASCADE',

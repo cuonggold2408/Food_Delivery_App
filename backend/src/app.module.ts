@@ -12,6 +12,8 @@ import { AuthModule } from 'src/routes/auth/auth.module';
 import { UserModule } from './routes/user/user.module';
 import { RestaurantModule } from 'src/routes/restaurant/restaurant.module';
 import { SearchModule } from './routes/search/search.module';
+import { CartModule } from './routes/cart/cart.module';
+
 
 @Module({
   imports: [
@@ -24,6 +26,7 @@ import { SearchModule } from './routes/search/search.module';
     }),
     RestaurantModule,
     SearchModule,
+    CartModule,
   ],
   controllers: [AppController],
   providers: [

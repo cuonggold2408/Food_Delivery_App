@@ -49,7 +49,7 @@ export class RestaurantRepository {
       .getMany();
   }
 
-  async getRestaurantById(id: number) {
+  async getRestaurantById(id: string) {
     const menuCategories = await this.menuCategoryRepo.find({
       where: { restaurant: { restaurant_id: id } },
       relations: ['menuItems', 'restaurant'],
@@ -79,7 +79,7 @@ export class RestaurantRepository {
     };
   }
 
-  async getRestaurantByIdAndByCategory(categoryName: string, id: number) {
+  async getRestaurantByIdAndByCategory(categoryName: string, id: string) {
     const cleanCategoryName = categoryName.trim().toLowerCase();
     const menuCategories = await this.menuCategoryRepo.find({
       where: { restaurant: { restaurant_id: id } },
@@ -106,7 +106,7 @@ export class RestaurantRepository {
     return await this.categoryRepo.find();
   }
 
-  async getItemsByRestaurantId(id: number, restaurantId: number) {
+  async getItemsByRestaurantId(id: string, restaurantId: string) {
     const restaurant = await this.restaurantRepository.findOne({
       where: { restaurant_id: restaurantId },
       relations: [
@@ -161,7 +161,7 @@ export class RestaurantRepository {
     });
   }
 
-  async addFavoriteRestaurant(userId: number, restaurantId: number) {
+  async addFavoriteRestaurant(userId: number, restaurantId: string) {
     const restaurant = await this.restaurantRepository.findOne({
       where: { restaurant_id: restaurantId },
     });
@@ -191,7 +191,7 @@ export class RestaurantRepository {
     return 'Thêm vào danh sách yêu thích thành công';
   }
 
-  async removeFavoriteRestaurant(userId: number, restaurantId: number) {
+  async removeFavoriteRestaurant(userId: number, restaurantId: string) {
     const favorite = await this.userFavoriteRepo.findOne({
       where: {
         user_id: userId,

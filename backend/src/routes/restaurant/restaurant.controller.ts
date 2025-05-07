@@ -52,7 +52,7 @@ export class RestaurantController {
   @Get(':id')
   @IsPublic()
   getRestaurantById(
-    @Param('id') id: number,
+    @Param('id') id: string,
     @Query('category') category?: string,
   ) {
     if (category) {
@@ -66,14 +66,14 @@ export class RestaurantController {
   }
   @Get('items/:id')
   @IsPublic()
-  getItemsByRestaurantId(@Param('id') id: number, @Body() body: any) {
+  getItemsByRestaurantId(@Param('id') id: string, @Body() body: any) {
     return this.restaurantService.getItemsByRestaurantId(id, body.restaurantId);
   }
 
   @Post('favorite/:restaurantId')
   addFavoriteRestaurant(
     @Req() req: any,
-    @Param('restaurantId') restaurantId: number,
+    @Param('restaurantId') restaurantId: string,
   ) {
     const userId = req.user.user_id;
     return this.restaurantService.addFavoriteRestaurant(userId, restaurantId);
@@ -82,7 +82,7 @@ export class RestaurantController {
   @Delete('favorite/:restaurantId')
   removeFavoriteRestaurant(
     @Req() req: any,
-    @Param('restaurantId') restaurantId: number,
+    @Param('restaurantId') restaurantId: string,
   ) {
     const userId = req.user.user_id;
     return this.restaurantService.removeFavoriteRestaurant(

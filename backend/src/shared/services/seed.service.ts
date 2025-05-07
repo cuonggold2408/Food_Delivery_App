@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { MenuItem } from 'src/database/entities/menu-item.entity';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as unzipper from 'unzipper';
 import { Restaurant } from 'src/database/entities/restaurant/restaurant.entity';
 import { RestaurantCategory } from 'src/database/entities/restaurant/restaurant-category.entity';
 import { RestaurantCategoryMapping } from 'src/database/entities/restaurant/restaurant-category-mapping.entity';
@@ -12,6 +13,7 @@ import { CustomizationCategory } from 'src/database/entities/restaurant/category
 import { CustomizationOption } from 'src/database/entities/restaurant/category/customization-option.entity';
 import { ItemCustomizationCategory } from 'src/database/entities/restaurant/category/item-customization-category.entity';
 import { MenuCategory } from 'src/database/entities/restaurant/category/menu-categories.entity';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class SeedService {
@@ -46,8 +48,22 @@ export class SeedService {
 
   async importData() {
     await this.restaurantRepo.query(`CREATE EXTENSION IF NOT EXISTS unaccent`);
-    const filePath = path.join(process.cwd(), 'data', 'data_app.json');
-    const jsonData = fs.readFileSync(filePath, 'utf8');
+    //  Bước 1: Giải nén zip
+    const zipPath = path.join(process.cwd(), 'data', 'data_app.zip');
+    const extractPath = path.join(process.cwd(), 'data', 'extracted');
+
+    if (!fs.existsSync(extractPath)) {
+      fs.mkdirSync(extractPath, { recursive: true });
+    }
+
+    await fs
+      .createReadStream(zipPath)
+      .pipe(unzipper.Extract({ path: extractPath }))
+      .promise();
+
+    // Bước 2: Đọc file JSON đã giải nén
+    const jsonPath = path.join(extractPath, 'data_app.json');
+    const jsonData = fs.readFileSync(jsonPath, 'utf8');
     const cities: any[] = JSON.parse(jsonData);
 
     for (const cityData of cities) {
@@ -61,6 +77,7 @@ export class SeedService {
 
         if (!categoryEntity) {
           categoryEntity = this.categoryRepo.create({
+            category_id: uuidv4(),
             name: category.category,
             image_url: category.url_category_image || '',
           });
@@ -72,7 +89,7 @@ export class SeedService {
 
           // Tạo restaurant
           const restaurant = this.restaurantRepo.create({
-            restaurant_id: merchant.id,
+            restaurant_id: merchant.ID,
             name: merchant.name,
             city: city,
             shop_image_url: merchant.photoHref,
@@ -121,7 +138,7 @@ export class SeedService {
 
               if (!menuCategoryEntity) {
                 menuCategoryEntity = this.menuCategoryRepo.create({
-                  categoryId: itemCategory.id,
+                  categoryId: itemCategory.ID,
                   name: itemCategory.name,
                   restaurant: savedRestaurant,
                 });
@@ -134,7 +151,7 @@ export class SeedService {
                 if (!item.available) continue;
 
                 const menuItem = this.menuItemRepo.create({
-                  item_id: item.id,
+                  item_id: item.ID,
                   name: item.name,
                   description: item.description || '',
                   price: item.priceInMinorUnit ?? 0,
@@ -150,7 +167,7 @@ export class SeedService {
                 for (const group of item.modifierGroups || []) {
                   const customizationCategory =
                     this.customizationCategoryRepo.create({
-                      categoryId: group.id,
+                      categoryId: group.ID,
                       name: group.name,
                       restaurantId: savedRestaurant,
                       minSelections: group.selectionType ?? 0,
@@ -175,7 +192,7 @@ export class SeedService {
                   // Insert customization options
                   const options = (group.modifiers || []).map((mod) =>
                     this.customizationOptionRepo.create({
-                      optionId: mod.id,
+                      optionId: mod.ID,
                       name: mod.name,
                       additionalPrice: mod.priceInMinorUnit?.toString() || '0',
                       categoryId: savedCategory,
