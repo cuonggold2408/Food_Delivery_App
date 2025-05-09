@@ -9,7 +9,7 @@ import { CartItem } from 'src/database/entities/cart/cart-item.entity';
 import { Cart } from 'src/database/entities/cart/cart.entity';
 import { MenuItem } from 'src/database/entities/menu-item.entity';
 import { Restaurant } from 'src/database/entities/restaurant/restaurant.entity';
-import { CartBodyType } from 'src/routes/cart/cart.model';
+import { CartBodyType, CartItemBodyType } from 'src/routes/cart/cart.model';
 import { Repository } from 'typeorm';
 
 @Injectable()
@@ -101,5 +101,63 @@ export class CartRepository {
     }
 
     return 'Thêm vào giỏ hàng thành công';
+  }
+
+  async updateItemCart(
+    cartItemId: number,
+    { quantity, total_pay, message, customizations, item_id }: CartItemBodyType,
+    user_id: number,
+  ) {
+    if (!quantity || !total_pay) {
+      throw new BadRequestException('Không đủ thông tin');
+    }
+
+    if (quantity <= 0) {
+      throw new BadRequestException('Số lượng phải lớn hơn 0');
+    }
+
+    if (parseFloat(total_pay) <= 0) {
+      throw new BadRequestException('Tổng tiền phải lớn hơn 0');
+    }
+
+    const cart = await this.cartRepository.findOne({
+      where: {
+        cart_id: cartItemId,
+        user: { user_id },
+      },
+    });
+    if (!cart) {
+      throw new BadRequestException('Giỏ hàng không tồn tại');
+    }
+
+    const cartItem = await this.cartItemRepository.findOne({
+      where: { cart_item_id: cartItemId, menuItem: { item_id } },
+    });
+    if (!cartItem) {
+      throw new BadRequestException('Món ăn không tồn tại');
+    }
+
+    cartItem.quantity = quantity;
+    cartItem.total_pay = total_pay;
+    cartItem.message = message;
+
+    if (customizations) {
+      // 1. Xóa tất cả customizations cũ của cart item
+      await this.cartItemCustomizationRepository.delete({
+        cart_item_id: cartItem.cart_item_id,
+      });
+
+      // 2. Thêm các customizations mới
+      await this.cartItemCustomizationRepository.save(
+        customizations.map((customization) => ({
+          cart_item_id: cartItem.cart_item_id,
+          option_id: customization.option_id,
+        })),
+      );
+    }
+
+    await this.cartItemRepository.save(cartItem);
+
+    return 'Cập nhật giỏ hàng thành công';
   }
 }
