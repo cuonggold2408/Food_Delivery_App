@@ -1,4 +1,5 @@
 import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+import { ApiOperation } from '@nestjs/swagger';
 import { SearchService } from 'src/routes/search/search.service';
 import { IsPublic } from 'src/shared/decorators/auth.decorator';
 
@@ -8,7 +9,7 @@ export class SearchController {
 
   @Get('/')
   @IsPublic()
-  @Get('/search')
+  @ApiOperation({ summary: 'Tìm kiếm nhà hàng, món ăn' })
   async search(
     @Query('query') query: string,
     @Query('page') page: number = 1,
