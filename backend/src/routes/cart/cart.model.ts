@@ -26,12 +26,12 @@ export type CartItemType = z.infer<typeof CartItemSchema>;
 export const CartItemCustomSchema = z.object({
   cart_item_id: z.number(),
   option_id: z.number(),
+  price_option: z.string(),
 });
 
 export type CartItemCustomType = z.infer<typeof CartItemCustomSchema>;
 
 export const CartBodySchema = CartSchema.pick({
-  user_id: true,
   restaurant_id: true,
 }).extend({
   item_id: CartItemSchema.shape.item_id,
@@ -45,7 +45,6 @@ export type CartBodyType = z.infer<typeof CartBodySchema>;
 
 export const CartItemBodySchema = CartItemSchema.pick({
   item_id: true,
-  total_pay: true,
   quantity: true,
   message: true,
 }).extend({

@@ -1,15 +1,11 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CartItemCustomization } from 'src/database/entities/cart/cart-item-customization.entity';
 import { CartItem } from 'src/database/entities/cart/cart-item.entity';
 import { Cart } from 'src/database/entities/cart/cart.entity';
 import { MenuItem } from 'src/database/entities/menu-item.entity';
 import { Restaurant } from 'src/database/entities/restaurant/restaurant.entity';
-import { CartBodyType, CartItemBodyType } from 'src/routes/cart/cart.model';
+import { CartBodyType } from 'src/routes/cart/cart.model';
 import { Repository } from 'typeorm';
 
 @Injectable()
@@ -31,133 +27,203 @@ export class CartRepository {
     private readonly menuItemRepository: Repository<MenuItem>,
   ) {}
 
-  async addToCart(
-    {
-      restaurant_id,
-      item_id,
-      quantity,
-      total_pay,
-      message,
-      customizations,
-    }: CartBodyType,
-    user_id: number,
-  ) {
-    if (!restaurant_id || !item_id || !quantity || !total_pay) {
-      throw new BadRequestException('Không đủ thông tin');
+  // So sánh option của sản phẩm user gửi lên với option của sản phẩm trong database
+  private compareCustomizations(
+    existingCustomizations: CartItemCustomization[],
+    newCustomizations: { option_id: number }[],
+  ): boolean {
+    if (existingCustomizations.length !== newCustomizations.length) {
+      return false;
     }
 
-    if (quantity <= 0) {
-      throw new BadRequestException('Số lượng phải lớn hơn 0');
-    }
+    const existingOptionIds = existingCustomizations
+      .map((c) => c.option_id)
+      .sort();
+    const newOptionIds = newCustomizations.map((c) => c.option_id).sort();
 
-    if (parseFloat(total_pay) <= 0) {
-      throw new BadRequestException('Tổng tiền phải lớn hơn 0');
-    }
-
-    const restaurant = await this.restaurantRepository.findOne({
-      where: { restaurant_id },
-    });
-    if (!restaurant) {
-      throw new BadRequestException('Cửa hàng không tồn tại');
-    }
-
-    const menuItem = await this.menuItemRepository.findOne({
-      where: { item_id },
-    });
-    if (!menuItem) {
-      throw new BadRequestException('Món ăn không tồn tại');
-    }
-
-    const cart = await this.cartRepository.findOne({
-      where: {
-        user: { user_id },
-        restaurant: { restaurant_id },
-      },
-    });
-    if (cart) {
-      throw new ConflictException('Giỏ hàng đã tồn tại');
-    }
-    const newCart = this.cartRepository.create({
-      user: { user_id },
-      restaurant: { restaurant_id },
-    });
-    await this.cartRepository.save(newCart);
-    const newCartItem = new CartItem();
-    newCartItem.cart = newCart;
-    newCartItem.menuItem = { item_id } as any;
-    newCartItem.total_pay = total_pay;
-    newCartItem.quantity = quantity;
-    newCartItem.message = message;
-
-    await this.cartItemRepository.save(newCartItem);
-    if (customizations) {
-      await this.cartItemCustomizationRepository.save(
-        customizations.map((customization) => ({
-          ...customization,
-          cart_item_id: newCartItem.cart_item_id,
-          option_id: customization.option_id,
-        })),
-      );
-    }
-
-    return 'Thêm vào giỏ hàng thành công';
+    return JSON.stringify(existingOptionIds) === JSON.stringify(newOptionIds);
   }
 
-  async updateItemCart(
-    cartItemId: number,
-    { quantity, total_pay, message, customizations, item_id }: CartItemBodyType,
+  async addToCart(
+    { restaurant_id, item_id, quantity, message, customizations }: CartBodyType,
     user_id: number,
   ) {
-    if (!quantity || !total_pay) {
-      throw new BadRequestException('Không đủ thông tin');
-    }
+    try {
+      if (!restaurant_id || !item_id || !quantity) {
+        throw new BadRequestException('Không đủ thông tin');
+      }
 
-    if (quantity <= 0) {
-      throw new BadRequestException('Số lượng phải lớn hơn 0');
-    }
+      if (quantity <= 0) {
+        throw new BadRequestException('Số lượng phải lớn hơn 0');
+      }
 
-    if (parseFloat(total_pay) <= 0) {
-      throw new BadRequestException('Tổng tiền phải lớn hơn 0');
-    }
+      const restaurant = await this.restaurantRepository.findOne({
+        where: { restaurant_id },
+      });
+      if (!restaurant) {
+        throw new BadRequestException('Cửa hàng không tồn tại');
+      }
 
-    const cart = await this.cartRepository.findOne({
-      where: {
-        cart_id: cartItemId,
-        user: { user_id },
-      },
-    });
-    if (!cart) {
-      throw new BadRequestException('Giỏ hàng không tồn tại');
-    }
+      const checkItemInRestaurant = await this.menuItemRepository.findOne({
+        where: { item_id, restaurant: { restaurant_id } },
+        relations: ['customizationMappings.category.options'],
+      });
+      if (!checkItemInRestaurant) {
+        throw new BadRequestException('Món ăn không tồn tại trong cửa hàng');
+      }
 
-    const cartItem = await this.cartItemRepository.findOne({
-      where: { cart_item_id: cartItemId, menuItem: { item_id } },
-    });
-    if (!cartItem) {
-      throw new BadRequestException('Món ăn không tồn tại');
-    }
-
-    cartItem.quantity = quantity;
-    cartItem.total_pay = total_pay;
-    cartItem.message = message;
-
-    if (customizations) {
-      // 1. Xóa tất cả customizations cũ của cart item
-      await this.cartItemCustomizationRepository.delete({
-        cart_item_id: cartItem.cart_item_id,
+      // Tìm giỏ hàng tồn tại cho user và cửa hàng hoặc tạo mới
+      let cart = await this.cartRepository.findOne({
+        where: {
+          user: { user_id },
+          restaurant: { restaurant_id },
+        },
       });
 
-      // 2. Thêm các customizations mới
-      await this.cartItemCustomizationRepository.save(
-        customizations.map((customization) => ({
-          cart_item_id: cartItem.cart_item_id,
-          option_id: customization.option_id,
-        })),
-      );
+      if (!cart) {
+        // Tạo giỏ hàng mới nếu không tồn tại
+        cart = this.cartRepository.create({
+          user: { user_id },
+          restaurant: { restaurant_id },
+        });
+        await this.cartRepository.save(cart);
+      }
+
+      // Kiểm tra xem món ăn đã tồn tại trong giỏ hàng chưa
+      const existingCartItem = await this.cartItemRepository.find({
+        where: {
+          cart: { cart_id: cart.cart_id },
+          menuItem: { item_id },
+        },
+        relations: [
+          'menuItem',
+          'menuItem.customizationMappings',
+          'menuItem.customizationMappings.category',
+        ],
+      });
+
+      console.log('existingCartItem: ', existingCartItem);
+
+      if (existingCartItem.length > 0) {
+        // Duyệt qua từng cart item để kiểm tra customizations
+        for (const cartItem of existingCartItem) {
+          // Lấy customizations của cart item hiện tại
+          const cartItemCustomizations =
+            await this.cartItemCustomizationRepository.find({
+              where: {
+                cart_item_id: cartItem.cart_item_id,
+              },
+              relations: ['option'],
+            });
+
+          // console.log('Cart Item Customizations:', cartItemCustomizations);
+          // console.log(
+          //   'Menu Item Customization Categories:',
+          //   cartItem.menuItem.customizationMappings,
+          // );
+
+          // So sánh customizations
+          const isSameCustomizations = this.compareCustomizations(
+            cartItemCustomizations,
+            customizations || [],
+          );
+
+          if (isSameCustomizations) {
+            // Nếu tìm thấy cart item có cùng customizations, tăng quantity
+            cartItem.quantity += quantity;
+
+            // Tính lại tổng tiền dựa trên giá gốc và options
+            const basePrice = parseFloat(cartItem.menuItem.price);
+            const optionPrices = cartItemCustomizations.reduce(
+              (total, custom) => total + parseFloat(custom.price_option),
+              0,
+            );
+            const pricePerItem = basePrice + optionPrices;
+            cartItem.total_pay = (pricePerItem * cartItem.quantity).toString();
+
+            cartItem.message = message || cartItem.message;
+            await this.cartItemRepository.save(cartItem);
+            return 'Cập nhật thông tin sản phẩm trong giỏ hàng thành công';
+          }
+        }
+      }
+
+      // Tính tổng tiền của các options được chọn
+      let totalOptionPrice = 0;
+      if (customizations && customizations.length > 0) {
+        // Duyệt qua từng category và options của món ăn
+        checkItemInRestaurant.customizationMappings.forEach((mapping) => {
+          mapping.category.options.forEach((option) => {
+            // Kiểm tra xem option này có được user chọn không
+            const isSelected = customizations.some(
+              (custom) => custom.option_id.toString() === option.optionId,
+            );
+            if (isSelected) {
+              totalOptionPrice += parseFloat(option.additionalPrice);
+            }
+          });
+        });
+      }
+
+      // Tính tổng tiền của món ăn (giá gốc + giá options)
+      const basePrice = parseFloat(checkItemInRestaurant.price);
+      const totalPrice = (basePrice + totalOptionPrice) * quantity;
+
+      // Nếu không tìm thấy cart item nào có cùng customizations, tạo mới
+      const newCartItem = this.cartItemRepository.create({
+        cart: { cart_id: cart.cart_id },
+        menuItem: { item_id },
+        quantity,
+        message,
+        total_pay: totalPrice.toString(),
+      });
+      await this.cartItemRepository.save(newCartItem);
+
+      // Thêm customizations nếu có
+      if (customizations && customizations.length > 0) {
+        const customizationsToSave = await Promise.all(
+          customizations.map(async (customization) => {
+            // Tìm option trong database để lấy giá
+            const option = checkItemInRestaurant.customizationMappings
+              .flatMap((mapping) => mapping.category.options)
+              .find(
+                (opt) => opt.optionId === customization.option_id.toString(),
+              );
+
+            return {
+              cart_item_id: newCartItem.cart_item_id,
+              option_id: customization.option_id,
+              price_option: option?.additionalPrice || '0',
+            };
+          }),
+        );
+
+        await this.cartItemCustomizationRepository.save(customizationsToSave);
+      }
+
+      return 'Thêm sản phẩm vào giỏ hàng thành công';
+    } catch {
+      throw new BadRequestException('Có lỗi xảy ra');
     }
+  }
 
-    await this.cartItemRepository.save(cartItem);
-
-    return 'Cập nhật giỏ hàng thành công';
+  async getCart(user_id: number) {
+    const cart = await this.cartRepository.find({
+      where: { user: { user_id } },
+      relations: ['restaurant', 'items'],
+    });
+    if (!cart) {
+      throw new BadRequestException('User không có giỏ hàng');
+    }
+    const cartResponse = cart.map((c) => ({
+      ...c.restaurant,
+      // Trả về số lượng item và tổng tiền
+      total_item: c.items.length,
+      total_pay: c.items.reduce(
+        (acc, item) => acc + parseFloat(item.total_pay),
+        0,
+      ),
+    }));
+    return cartResponse;
   }
 }
