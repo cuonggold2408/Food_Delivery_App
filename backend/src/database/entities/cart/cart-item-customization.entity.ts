@@ -1,4 +1,4 @@
-import { Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 import { CustomizationOption } from 'src/database/entities/restaurant/category/customization-option.entity';
 import { CartItem } from 'src/database/entities/cart/cart-item.entity';
 
@@ -9,6 +9,9 @@ export class CartItemCustomization {
 
   @PrimaryColumn()
   option_id: number;
+
+  @Column({ type: 'varchar', length: 255, default: '0' })
+  price_option: string;
 
   @ManyToOne(() => CartItem, (ci) => ci.customizations, {
     onDelete: 'CASCADE',
