@@ -207,7 +207,7 @@ export class CartRepository {
     }
   }
 
-  async getCart(user_id: number) {
+  async getCartOfUser(user_id: number) {
     const cart = await this.cartRepository.find({
       where: { user: { user_id } },
       relations: ['restaurant', 'items'],
@@ -225,5 +225,51 @@ export class CartRepository {
       ),
     }));
     return cartResponse;
+  }
+
+  async getCart(user_id: number, restaurantId: string) {
+    const cart = await this.cartRepository.findOne({
+      where: { user: { user_id }, restaurant: { restaurant_id: restaurantId } },
+      relations: ['items', 'items.customizations.option'],
+    });
+    if (!cart) {
+      return null;
+    }
+    // Tính tổng số lượng các món trong giỏ hàng
+    const quantity_item = cart.items.reduce(
+      (acc, item) => acc + item.quantity,
+      0,
+    );
+
+    // Tính tổng tiền phải trả cho giỏ hàng
+    const total_pay = cart.items.reduce(
+      (acc, item) => acc + parseFloat(item.total_pay),
+      0,
+    );
+
+    // Tạo mảng items với thông tin món ăn
+    const items = cart.items.map((item) => {
+      // Tạo tên các option nếu có nhiều option
+      const option_names = item.customizations
+        ? item.customizations
+            .map((customization) => customization.option.name)
+            .join(', ')
+        : '';
+
+      return {
+        image_dish: item.menuItem.image_url,
+        name_dish: item.menuItem.name,
+        option_name: option_names, // Tên các option
+        message: item.message || '', // Nếu có message
+        total_pay: parseFloat(item.total_pay).toFixed(0).toString(),
+        quantity: item.quantity,
+      };
+    });
+
+    return {
+      quantity_item,
+      total_pay: total_pay.toString(),
+      items,
+    };
   }
 }

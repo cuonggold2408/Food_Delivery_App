@@ -10,7 +10,11 @@ export class CartService {
     return this.cartRepository.addToCart(body, user_id);
   }
 
-  async getCart(user_id: number) {
-    return this.cartRepository.getCart(user_id);
+  async getCartOfUser(user_id: number) {
+    return this.cartRepository.getCartOfUser(user_id);
+  }
+
+  async getCart(user_id: number, restaurantId: string) {
+    return this.cartRepository.getCart(user_id, restaurantId);
   }
 }

@@ -25,28 +25,93 @@ export class RestaurantRepository {
     @InjectRepository(UserFavoriteRestaurant)
     private readonly userFavoriteRepo: Repository<UserFavoriteRestaurant>,
   ) {}
-  async getRestaurantsWithMenuItems(skip: number, take: number) {
-    return this.restaurantRepository.find({
-      skip,
-      take,
-      relations: ['menuItems', 'menuItems.menuCategory'],
-    });
+
+  // Lấy tất cả nhà hàng và lọc theo khoảng cách
+  async getRestaurantsWithLocation(
+    page: number,
+    limit: number,
+    latitude: number,
+    longitude: number,
+    radius: number,
+  ) {
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.restaurantRepository
+      .createQueryBuilder('restaurant')
+      .addSelect(
+        `ST_Distance(
+            ST_SetSRID(ST_MakePoint(restaurant.longitude, restaurant.latitude), 4326),
+            ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)
+        )`,
+        'distance',
+      )
+      .where(
+        `ST_Distance(
+            ST_SetSRID(ST_MakePoint(restaurant.longitude, restaurant.latitude), 4326),
+            ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)
+        ) <= :radius`,
+        { latitude, longitude, radius },
+      )
+      .skip(skip)
+      .take(limit)
+      .orderBy('distance', 'ASC');
+
+    const [restaurants, totalRestaurants] =
+      await queryBuilder.getManyAndCount();
+
+    return {
+      currentPage: page,
+      limit,
+      total: totalRestaurants,
+      data: restaurants,
+    };
   }
 
-  async getRestaurantsByCategories(
+  // Lọc theo danh mục và khoảng cách
+  async getRestaurantsByCategoriesAndLocation(
     categoryNames: string[],
-    skip: number,
-    take: number,
+    page: number,
+    limit: number,
+    latitude: number,
+    longitude: number,
+    radius: number,
   ) {
-    return this.restaurantRepository
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.restaurantRepository
       .createQueryBuilder('restaurant')
-      .leftJoinAndSelect('restaurant.menuItems', 'menu_item')
-      .leftJoinAndSelect('restaurant.mappings', 'mapping')
-      .leftJoinAndSelect('mapping.category', 'category')
+      // .leftJoinAndSelect('restaurant.menuItems', 'menu_item')
+
+      .leftJoin('restaurant.mappings', 'mapping')
+      .leftJoin('mapping.category', 'category')
       .where('category.name IN (:...categoryNames)', { categoryNames })
+      .addSelect(
+        `ST_Distance(
+            ST_SetSRID(ST_MakePoint(restaurant.longitude, restaurant.latitude), 4326),
+            ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)
+        )`,
+        'distance',
+      )
+      .andWhere(
+        `ST_Distance(
+            ST_SetSRID(ST_MakePoint(restaurant.longitude, restaurant.latitude), 4326),
+            ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)
+        ) <= :radius`,
+        { latitude, longitude, radius },
+      )
       .skip(skip)
-      .take(take)
-      .getMany();
+      .take(limit)
+      .orderBy('distance', 'ASC');
+
+    const [restaurants, totalRestaurants] =
+      await queryBuilder.getManyAndCount();
+
+    return {
+      currentPage: page,
+      limit,
+      total: totalRestaurants,
+      data: restaurants,
+    };
   }
 
   async getRestaurantById(id: string) {
@@ -129,6 +194,7 @@ export class RestaurantRepository {
     const dish = dishArr[0];
 
     return {
+      restaurant_name: restaurant.name,
       item_id: dish.item_id,
       item_name: dish.name,
       item_desc: dish.description,
