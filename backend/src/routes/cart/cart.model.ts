@@ -14,7 +14,6 @@ export const CartItemSchema = z.object({
   cart_item_id: z.string(),
   cart_id: z.string(),
   item_id: z.string(),
-  total_pay: z.string(),
   quantity: z.number(),
   message: z.string().optional(),
   created_at: z.date(),
@@ -35,7 +34,6 @@ export const CartBodySchema = CartSchema.pick({
   restaurant_id: true,
 }).extend({
   item_id: CartItemSchema.shape.item_id,
-  total_pay: CartItemSchema.shape.total_pay,
   quantity: CartItemSchema.shape.quantity,
   message: CartItemSchema.shape.message.optional(),
   customizations: CartItemCustomSchema.array().optional(),

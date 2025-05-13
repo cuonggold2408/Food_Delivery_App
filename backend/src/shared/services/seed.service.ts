@@ -48,6 +48,7 @@ export class SeedService {
 
   async importData() {
     await this.restaurantRepo.query(`CREATE EXTENSION IF NOT EXISTS unaccent`);
+    await this.restaurantRepo.query(`CREATE EXTENSION IF NOT EXISTS postgis`);
     //  Bước 1: Giải nén zip
     const zipPath = path.join(process.cwd(), 'data', 'data_app.zip');
     const extractPath = path.join(process.cwd(), 'data', 'extracted');
