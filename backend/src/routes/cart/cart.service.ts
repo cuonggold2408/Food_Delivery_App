@@ -17,4 +17,21 @@ export class CartService {
   async getCart(user_id: number, restaurantId: string) {
     return this.cartRepository.getCart(user_id, restaurantId);
   }
+
+  async deleteAllItemFromCart(restaurantId: string, user_id: number) {
+    return this.cartRepository.deleteAllItemFromCart(restaurantId, user_id);
+  }
+
+  async updateItem(
+    body: {
+      itemId: string;
+      quantity: number;
+      message?: string;
+      restaurantId: string;
+      customizations: any[];
+    },
+    user_id: number,
+  ) {
+    return this.cartRepository.updateItem(body, user_id);
+  }
 }

@@ -43,7 +43,7 @@ export class RestaurantController {
   @ApiQuery({
     name: 'radius',
     required: false,
-    description: 'Bán kính tính bằng mét (mặc định 10000 mét)',
+    description: 'Bán kính tính bằng mét (mặc định 5000 mét)',
     type: Number,
   })
   getAllRestaurants(
@@ -52,13 +52,14 @@ export class RestaurantController {
     @Query('category') category?: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
-    @Query('radius') radius: number = 10000,
+    @Query('radius') radius: number = 5000,
   ) {
     if (!latitude || !longitude) {
       throw new BadRequestException(
         'Vị trí người dùng cần thiết để xác định các nhà hàng gần bạn.',
       );
     }
+    const radiusInMeters = radius / 111320; // chuyển đổi từ mét sang độ
 
     const categories = category
       ? category.split(',').map((c) => c.trim().toLowerCase())
@@ -71,7 +72,7 @@ export class RestaurantController {
         limit,
         latitude,
         longitude,
-        radius,
+        radiusInMeters,
       );
     }
 
@@ -80,7 +81,7 @@ export class RestaurantController {
       limit,
       latitude,
       longitude,
-      radius,
+      radiusInMeters,
     );
   }
 
