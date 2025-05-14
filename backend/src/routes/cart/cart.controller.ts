@@ -1,5 +1,19 @@
-import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Patch,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { CartBodyDTO } from 'src/routes/cart/cart.dto';
 import { CartService } from 'src/routes/cart/cart.service';
 
@@ -34,5 +48,56 @@ export class CartController {
   async addToCart(@Body() body: CartBodyDTO, @Req() req: any) {
     const user_id = req.user.user_id;
     return this.cartService.addToCart(body, user_id);
+  }
+
+  @Delete('/items')
+  @ApiOperation({
+    summary: 'Xóa tất cả món ăn khỏi giỏ hàng',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        restaurantId: { type: 'string' },
+      },
+    },
+  })
+  async deleteAllItemFromCart(
+    @Body() body: { restaurantId: string },
+    @Req() req: any,
+  ) {
+    const user_id = req.user.user_id;
+    return this.cartService.deleteAllItemFromCart(body.restaurantId, user_id);
+  }
+
+  @Patch('/item')
+  @ApiOperation({
+    summary: 'Cập nhật số lượng món ăn và message trong giỏ hàng',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        itemId: { type: 'string' },
+        quantity: { type: 'number' },
+        message: { type: 'string', default: null },
+        restaurantId: { type: 'string' },
+        customizations: { type: 'array', default: [] },
+      },
+    },
+  })
+  async updateItem(
+    @Body()
+    body: {
+      itemId: string;
+      quantity: number;
+      message?: string;
+      restaurantId: string;
+      customizations: any[];
+    },
+    @Req() req: any,
+  ) {
+    const user_id = req.user.user_id;
+    return this.cartService.updateItem(body, user_id);
   }
 }
