@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:frontend/views/settings/menu.dart';
 import 'package:frontend/views/settings/add_address.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -23,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _canFetch = true;
   late Future<List<String>> _categoriesFuture;
+  final int _cartItemCount = 2; // Số lượng sản phẩm trong giỏ hàng (giá trị tĩnh để demo)
 
   // Constants for styling
   static const _primaryColor = Color(0xFFFC6E2A);
@@ -433,7 +435,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         Row(
           children: [
-            if (_isLoggedIn) _buildNotificationIcon(),
             if (!_isLoggedIn)
               TextButton(
                 onPressed: () {
@@ -451,6 +452,39 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
+            SizedBox(width: screenWidth * 0.02),
+            Stack(
+              children: [
+                IconButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/draft');
+                  },
+                  icon: Icon(
+                    Icons.shopping_cart,
+                    size: 28,
+                    color: _primaryColor,
+                  ),
+                ),
+                if (_cartItemCount > 0)
+                  Positioned(
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.orange,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '$_cartItemCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ],
         ),
       ],
@@ -496,28 +530,6 @@ class _HomeScreenState extends State<HomeScreen> {
           child: icon,
         ),
       ),
-    );
-  }
-
-  Widget _buildNotificationIcon() {
-    return Stack(
-      children: [
-        const Icon(Icons.notifications, size: 28),
-        Positioned(
-          right: 0,
-          child: Container(
-            padding: const EdgeInsets.all(4),
-            decoration: const BoxDecoration(
-              color: Colors.orange,
-              shape: BoxShape.circle,
-            ),
-            child: const Text(
-              '2',
-              style: TextStyle(color: Colors.white, fontSize: 12),
-            ),
-          ),
-        ),
-      ],
     );
   }
 

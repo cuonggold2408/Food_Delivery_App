@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/views/home/product_details_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -17,6 +18,7 @@ class _RestaurantScreenState extends State<RestaurantScreen> {
   dynamic _restaurantData;
   bool _isLoading = true;
   String? _errorMessage;
+  int _selectedCategoryIndex = 0;
 
   @override
   void initState() {
@@ -59,6 +61,15 @@ class _RestaurantScreenState extends State<RestaurantScreen> {
     }
   }
 
+  String _formatPrice(String price) {
+    try {
+      final number = int.parse(price);
+      return '${(number ~/ 1000)}.${number % 1000 == 0 ? '000' : (number % 1000).toString().padLeft(3, '0')}₫';
+    } catch (e) {
+      return '$price₫';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -66,6 +77,7 @@ class _RestaurantScreenState extends State<RestaurantScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[200],
       body: SafeArea(
+        bottom: false,
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _errorMessage != null
@@ -146,21 +158,13 @@ class _RestaurantScreenState extends State<RestaurantScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          // Address
+                          // City
                           Text(
-                            '${_restaurantData['street_address'] ?? 'Unknown Address'}, ${_restaurantData['city'] ?? 'Unknown City'}',
-                            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                          ),
-                          const SizedBox(height: 8),
-                          // Description
-                          Text(
-                            _restaurantData['product_desc']?.isNotEmpty == true
-                                ? _restaurantData['product_desc']
-                                : 'No description available.',
+                            _restaurantData['city'] ?? 'Unknown City',
                             style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                           ),
                           const SizedBox(height: 16),
-                          // Rating, Delivery Info, and Time (placeholders as API doesn't provide)
+                          // Rating and placeholders for delivery info
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -169,7 +173,7 @@ class _RestaurantScreenState extends State<RestaurantScreen> {
                                   const Icon(Icons.star, color: Colors.orange, size: 20),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '4.7', // API doesn't provide rating
+                                    _restaurantData['rating']?.toString() ?? 'N/A',
                                     style: const TextStyle(fontSize: 16),
                                   ),
                                 ],
@@ -179,7 +183,7 @@ class _RestaurantScreenState extends State<RestaurantScreen> {
                                   const Icon(Icons.delivery_dining, color: Colors.grey, size: 20),
                                   const SizedBox(width: 4),
                                   Text(
-                                    'Free', // API doesn't provide delivery fee
+                                    'Free', // Placeholder
                                     style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                                   ),
                                 ],
@@ -189,7 +193,7 @@ class _RestaurantScreenState extends State<RestaurantScreen> {
                                   const Icon(Icons.access_time, color: Colors.grey, size: 20),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '20 min', // API doesn't provide delivery time
+                                    '20 min', // Placeholder
                                     style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                                   ),
                                 ],
@@ -197,65 +201,47 @@ class _RestaurantScreenState extends State<RestaurantScreen> {
                             ],
                           ),
                           const SizedBox(height: 16),
-                          // Tabs (hardcoded as API doesn't provide categories)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              ElevatedButton(
-                                onPressed: () {},
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _primaryColor,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
+                          // Category Tabs
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: List.generate(
+                                _restaurantData['menuCategories']?.length ?? 0,
+                                (index) => Padding(
+                                  padding: const EdgeInsets.only(right: 8.0),
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _selectedCategoryIndex = index;
+                                      });
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _selectedCategoryIndex == index
+                                          ? _primaryColor
+                                          : Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      _restaurantData['menuCategories'][index]['category_name'] ??
+                                          'Category',
+                                      style: TextStyle(
+                                        color: _selectedCategoryIndex == index
+                                            ? Colors.white
+                                            : Colors.black,
+                                        fontFamily: _fontFamily,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                                child: const Text(
-                                  "Menu",
-                                  style: TextStyle(color: Colors.white, fontFamily: _fontFamily),
-                                ),
                               ),
-                              OutlinedButton(
-                                onPressed: () {},
-                                style: OutlinedButton.styleFrom(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                ),
-                                child: const Text(
-                                  "Sandwich",
-                                  style: TextStyle(color: Colors.black, fontFamily: _fontFamily),
-                                ),
-                              ),
-                              OutlinedButton(
-                                onPressed: () {},
-                                style: OutlinedButton.styleFrom(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                ),
-                                child: const Text(
-                                  "Pizza",
-                                  style: TextStyle(color: Colors.black, fontFamily: _fontFamily),
-                                ),
-                              ),
-                              OutlinedButton(
-                                onPressed: () {},
-                                style: OutlinedButton.styleFrom(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                ),
-                                child: const Text(
-                                  "Sanwii",
-                                  style: TextStyle(color: Colors.black, fontFamily: _fontFamily),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                           const SizedBox(height: 16),
                           // Menu Section Title
                           Text(
-                            "Menu (${_restaurantData['menuItems']?.length ?? 0})",
+                            "${_restaurantData['menuCategories']?[_selectedCategoryIndex]['category_name'] ?? 'Menu'} (${_restaurantData['menuCategories']?[_selectedCategoryIndex]['items']?.length ?? 0})",
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -264,7 +250,9 @@ class _RestaurantScreenState extends State<RestaurantScreen> {
                           ),
                           const SizedBox(height: 16),
                           // Menu Items
-                          _restaurantData['menuItems']?.isNotEmpty == true
+                          _restaurantData['menuCategories']?[_selectedCategoryIndex]['items']
+                                      ?.isNotEmpty ==
+                                  true
                               ? GridView.builder(
                                   shrinkWrap: true,
                                   physics: const NeverScrollableScrollPhysics(),
@@ -274,18 +262,16 @@ class _RestaurantScreenState extends State<RestaurantScreen> {
                                     mainAxisSpacing: 16,
                                     childAspectRatio: 0.7,
                                   ),
-                                  itemCount: _restaurantData['menuItems'].length,
+                                  itemCount: _restaurantData['menuCategories']
+                                          [_selectedCategoryIndex]['items']
+                                      .length,
                                   itemBuilder: (context, index) {
-                                    final item = _restaurantData['menuItems'][index];
+                                    final item = _restaurantData['menuCategories']
+                                        [_selectedCategoryIndex]['items'][index];
                                     return _buildMenuItem(
                                       screenWidth,
-                                      item['product_name'] ?? 'Menu Item',
-                                      item['product_image']?.isNotEmpty == true
-                                          ? item['product_image']
-                                          : 'https://mms.img.susercontent.com/vn-11134259-7ra0g-m7dhzfyifri4bd@resize_ss280x175!@crop_w280_h175_cT',
+                                      item,
                                       _restaurantData['name'] ?? 'Restaurant',
-                                      item['product_price'] ?? '0đ',
-                                      item['product_is_available'] == true,
                                     );
                                   },
                                 )
@@ -302,15 +288,33 @@ class _RestaurantScreenState extends State<RestaurantScreen> {
   }
 
   Widget _buildMenuItem(
-    double screenWidth,
-    String name,
-    String imageUrl,
-    String restaurantName,
-    String price,
-    bool isAvailable,
-  ) {
-    return SizedBox(
-      width: (screenWidth - 48) / 2, // Adjust for padding and spacing
+  double screenWidth,
+  Map<String, dynamic> item, // Change to accept the full item object
+  String restaurantName,
+) {
+  final name = item['product_name'] ?? 'Menu Item';
+  final imageUrl = item['product_image']?.isNotEmpty == true
+      ? item['product_image']
+      : 'https://mms.img.susercontent.com/vn-11134259-7ra0g-m7dhzfyifri4bd@resize_ss280x175!@crop_w280_h175_cT';
+  final price = _formatPrice(item['product_price'] ?? '0');
+  final isAvailable = true; // Assume available as JSON doesn't provide this
+
+  return GestureDetector(
+    onTap: isAvailable
+        ? () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProductDetailsScreen(
+                  itemId: item['product_id'], // Use product_id from item
+                  restaurantId: _restaurantData['restaurant_id'],
+                ),
+              ),
+            );
+          }
+        : null,
+    child: SizedBox(
+      width: (screenWidth - 48) / 2,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -389,6 +393,7 @@ class _RestaurantScreenState extends State<RestaurantScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
