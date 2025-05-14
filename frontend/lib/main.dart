@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/views/cart/draft_screen.dart';
 import 'package:frontend/views/home/home_screen.dart';
 import 'package:frontend/views/settings/menu.dart';
 import 'package:frontend/views/auth/login_screen.dart';
@@ -26,8 +27,8 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginPage(),
         '/register': (context) => const RegisterPage(),
-        '/detail': (context) => const ProductDetailsScreen(),
         '/home': (context) => const HomeScreen(),
+        '/draft': (context) => DraftPage(),
       },
 
       home: const HomeScreen(), // Đặt trang đăng nhập làm trang chính
