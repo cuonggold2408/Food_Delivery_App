@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Delete,
   Get,
@@ -29,11 +30,37 @@ export class RestaurantController {
     required: false,
     description: 'Filter by category',
   })
+  @ApiQuery({
+    name: 'latitude',
+    required: true,
+    description: 'Vĩ độ của người dùng',
+  })
+  @ApiQuery({
+    name: 'longitude',
+    required: true,
+    description: 'Kinh độ của người dùng',
+  })
+  @ApiQuery({
+    name: 'radius',
+    required: false,
+    description: 'Bán kính tính bằng mét (mặc định 5000 mét)',
+    type: Number,
+  })
   getAllRestaurants(
+    @Query('latitude') latitude: number, // Vị trí của người dùng
+    @Query('longitude') longitude: number, // Vị trí của người dùng
     @Query('category') category?: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
+    @Query('radius') radius: number = 5000,
   ) {
+    if (!latitude || !longitude) {
+      throw new BadRequestException(
+        'Vị trí người dùng cần thiết để xác định các nhà hàng gần bạn.',
+      );
+    }
+    const radiusInMeters = radius / 111320; // chuyển đổi từ mét sang độ
+
     const categories = category
       ? category.split(',').map((c) => c.trim().toLowerCase())
       : [];
@@ -43,10 +70,19 @@ export class RestaurantController {
         categories,
         page,
         limit,
+        latitude,
+        longitude,
+        radiusInMeters,
       );
     }
 
-    return this.restaurantService.getAllRestaurants(page, limit);
+    return this.restaurantService.getAllRestaurants(
+      page,
+      limit,
+      latitude,
+      longitude,
+      radiusInMeters,
+    );
   }
 
   @Get('categories')
@@ -90,7 +126,7 @@ export class RestaurantController {
 
   @Get('items/:itemId')
   @IsPublic()
-  @ApiOperation({ summary: 'Lấy danh sách các món ăn của 1 nhà hàng' })
+  @ApiOperation({ summary: 'Lấy chi tiết của 1 món ăn trong 1 nhà hàng' })
   @ApiResponse({ status: 200, description: 'Return restaurant items' })
   getItemsByRestaurantId(
     @Param('itemId') id: string,
