@@ -272,4 +272,103 @@ export class CartRepository {
       items,
     };
   }
+
+  async deleteAllItemFromCart(restaurantId: string, user_id: number) {
+    const cart = await this.cartRepository.findOne({
+      where: { user: { user_id }, restaurant: { restaurant_id: restaurantId } },
+    });
+
+    if (!cart) {
+      throw new BadRequestException('User không có giỏ hàng');
+    }
+    await this.cartRepository.delete(cart.cart_id);
+    return 'Xóa tất cả món ăn khỏi giỏ hàng thành công';
+  }
+
+  async updateItem(
+    body: {
+      itemId: string;
+      quantity: number;
+      message?: string;
+      restaurantId: string;
+      customizations: any[];
+    },
+    user_id: number,
+  ) {
+    const cart = await this.cartRepository.findOne({
+      where: {
+        user: { user_id },
+        restaurant: { restaurant_id: body.restaurantId },
+      },
+    });
+
+    if (!cart) {
+      throw new BadRequestException('User không có giỏ hàng');
+    }
+
+    // Tìm tất cả các cart items có cùng item_id
+    const cartItems = await this.cartItemRepository.find({
+      where: {
+        cart: { cart_id: cart.cart_id },
+        menuItem: { item_id: body.itemId },
+      },
+      relations: ['menuItem'],
+    });
+
+    if (cartItems.length === 0) {
+      throw new BadRequestException('Món ăn không tồn tại trong giỏ hàng');
+    }
+
+    // Nếu có customizations, tìm item có cùng customizations
+    let targetItem = cartItems[0]; // Mặc định lấy item đầu tiên nếu không có customizations
+    if (body.customizations && body.customizations.length > 0) {
+      for (const cartItem of cartItems) {
+        const cartItemCustomizations =
+          await this.cartItemCustomizationRepository.find({
+            where: {
+              cart_item_id: cartItem.cart_item_id,
+            },
+            relations: ['option'],
+          });
+
+        const isSameCustomizations = this.compareCustomizations(
+          cartItemCustomizations,
+          body.customizations,
+        );
+
+        if (isSameCustomizations) {
+          targetItem = cartItem;
+          break;
+        }
+      }
+    }
+
+    if (body.quantity === 0) {
+      await this.cartItemRepository.delete(targetItem.cart_item_id);
+      return 'Xoá món ăn thành công';
+    }
+
+    targetItem.message = body.message || '';
+    if (targetItem.quantity < body.quantity) {
+      targetItem.total_pay = (
+        parseFloat(targetItem.total_pay) +
+        (parseFloat(targetItem.total_pay) / targetItem.quantity) *
+          (body.quantity - targetItem.quantity)
+      ).toString();
+    } else if (targetItem.quantity >= body.quantity) {
+      targetItem.total_pay = (
+        parseFloat(targetItem.total_pay) -
+        (parseFloat(targetItem.total_pay) / targetItem.quantity) *
+          (targetItem.quantity - body.quantity)
+      ).toString();
+    }
+    targetItem.quantity = body.quantity;
+
+    await this.cartItemRepository.update(targetItem.cart_item_id, {
+      message: targetItem.message,
+      quantity: targetItem.quantity,
+      total_pay: targetItem.total_pay,
+    });
+    return 'Cập nhật thông tin sản phẩm trong giỏ hàng thành công';
+  }
 }
