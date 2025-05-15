@@ -207,7 +207,7 @@ export class CartRepository {
     }
   }
 
-  async getCart(user_id: number) {
+  async getCartOfUser(user_id: number) {
     const cart = await this.cartRepository.find({
       where: { user: { user_id } },
       relations: ['restaurant', 'items'],
@@ -225,5 +225,150 @@ export class CartRepository {
       ),
     }));
     return cartResponse;
+  }
+
+  async getCart(user_id: number, restaurantId: string) {
+    const cart = await this.cartRepository.findOne({
+      where: { user: { user_id }, restaurant: { restaurant_id: restaurantId } },
+      relations: ['items', 'items.customizations.option'],
+    });
+    if (!cart) {
+      return null;
+    }
+    // Tính tổng số lượng các món trong giỏ hàng
+    const quantity_item = cart.items.reduce(
+      (acc, item) => acc + item.quantity,
+      0,
+    );
+
+    // Tính tổng tiền phải trả cho giỏ hàng
+    const total_pay = cart.items.reduce(
+      (acc, item) => acc + parseFloat(item.total_pay),
+      0,
+    );
+
+    // Tạo mảng items với thông tin món ăn
+    const items = cart.items.map((item) => {
+      // Tạo tên các option nếu có nhiều option
+      const option_names = item.customizations
+        ? item.customizations
+            .map((customization) => customization.option.name)
+            .join(', ')
+        : '';
+
+      return {
+        image_dish: item.menuItem.image_url,
+        name_dish: item.menuItem.name,
+        option_name: option_names, // Tên các option
+        message: item.message || '', // Nếu có message
+        total_pay: parseFloat(item.total_pay).toFixed(0).toString(),
+        quantity: item.quantity,
+      };
+    });
+
+    return {
+      quantity_item,
+      total_pay: total_pay.toString(),
+      items,
+    };
+  }
+
+  async deleteAllItemFromCart(restaurantId: string, user_id: number) {
+    const cart = await this.cartRepository.findOne({
+      where: { user: { user_id }, restaurant: { restaurant_id: restaurantId } },
+    });
+
+    if (!cart) {
+      throw new BadRequestException('User không có giỏ hàng');
+    }
+    await this.cartRepository.delete(cart.cart_id);
+    return 'Xóa tất cả món ăn khỏi giỏ hàng thành công';
+  }
+
+  async updateItem(
+    body: {
+      itemId: string;
+      quantity: number;
+      message?: string;
+      restaurantId: string;
+      customizations: any[];
+    },
+    user_id: number,
+  ) {
+    const cart = await this.cartRepository.findOne({
+      where: {
+        user: { user_id },
+        restaurant: { restaurant_id: body.restaurantId },
+      },
+    });
+
+    if (!cart) {
+      throw new BadRequestException('User không có giỏ hàng');
+    }
+
+    // Tìm tất cả các cart items có cùng item_id
+    const cartItems = await this.cartItemRepository.find({
+      where: {
+        cart: { cart_id: cart.cart_id },
+        menuItem: { item_id: body.itemId },
+      },
+      relations: ['menuItem'],
+    });
+
+    if (cartItems.length === 0) {
+      throw new BadRequestException('Món ăn không tồn tại trong giỏ hàng');
+    }
+
+    // Nếu có customizations, tìm item có cùng customizations
+    let targetItem = cartItems[0]; // Mặc định lấy item đầu tiên nếu không có customizations
+    if (body.customizations && body.customizations.length > 0) {
+      for (const cartItem of cartItems) {
+        const cartItemCustomizations =
+          await this.cartItemCustomizationRepository.find({
+            where: {
+              cart_item_id: cartItem.cart_item_id,
+            },
+            relations: ['option'],
+          });
+
+        const isSameCustomizations = this.compareCustomizations(
+          cartItemCustomizations,
+          body.customizations,
+        );
+
+        if (isSameCustomizations) {
+          targetItem = cartItem;
+          break;
+        }
+      }
+    }
+
+    if (body.quantity === 0) {
+      await this.cartItemRepository.delete(targetItem.cart_item_id);
+      return 'Xoá món ăn thành công';
+    }
+
+    targetItem.message = body.message || '';
+    if (targetItem.quantity < body.quantity) {
+      targetItem.total_pay = (
+        parseFloat(targetItem.total_pay) +
+        (parseFloat(targetItem.total_pay) / targetItem.quantity) *
+          (body.quantity - targetItem.quantity)
+      ).toString();
+    } else if (targetItem.quantity >= body.quantity) {
+      targetItem.total_pay = (
+        parseFloat(targetItem.total_pay) -
+        (parseFloat(targetItem.total_pay) / targetItem.quantity) *
+          (targetItem.quantity - body.quantity)
+      ).toString();
+    }
+    targetItem.quantity = body.quantity;
+
+    await this.cartItemRepository.update(targetItem.cart_item_id, {
+      message: targetItem.message,
+      quantity: targetItem.quantity,
+      total_pay: targetItem.total_pay,
+    });
+    return 'Cập nhật thông tin sản phẩm trong giỏ hàng thành công';
   }
 }
