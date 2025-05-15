@@ -6,11 +6,17 @@
   <component name="ChangeListManager">
     <list default="true" id="b017c43e-61d6-4107-a88b-4ca65c25a724" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.dart_tool/package_config.json" beforeDir="false" afterPath="$PROJECT_DIR$/.dart_tool/package_config.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.dart_tool/package_config_subset" beforeDir="false" afterPath="$PROJECT_DIR$/.dart_tool/package_config_subset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.dart_tool/version" beforeDir="false" afterPath="$PROJECT_DIR$/.dart_tool/version" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/services/api_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/api_service.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/views/settings/add_address.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/views/settings/add_address.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/local.properties" beforeDir="false" afterPath="$PROJECT_DIR$/android/local.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/images/bach.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/main.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/views/auth/login_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/views/auth/login_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/views/home/home_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/views/home/home_screen.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/views/settings/address_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/views/settings/address_screen.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/views/settings/menu.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/views/settings/menu.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/views/settings/profile_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/views/settings/profile_screen.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
