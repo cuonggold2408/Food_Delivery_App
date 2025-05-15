@@ -4,6 +4,7 @@ import 'package:frontend/views/auth/register_screen.dart';
 import 'package:frontend/conponents/custom_snack_bar.dart';
 import 'package:frontend/conponents/top_snack_bar.dart';
 import 'package:frontend/views/home/home_screen.dart';
+import 'package:frontend/views/settings/location_permission_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
@@ -89,7 +90,9 @@ class _LoginPageState extends State<LoginPage> {
         _showSuccessSnackbar('Đăng nhập thành công!');
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(
+            builder: (context) => const LocationPermissionScreen(),
+          ),
         );
       } else {
         _showErrorSnackbar(errorMessage);
