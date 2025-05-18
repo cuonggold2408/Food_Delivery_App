@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Put,
   Req,
@@ -39,6 +40,13 @@ export class UserController {
   ) {
     const userId = req.user.user_id;
     return this.userService.updateAddress(addressId, userId, body);
+  }
+
+  @Patch('address/:addressId')
+  @ApiOperation({ summary: 'Cập nhật địa chỉ làm mặc định' })
+  updateDefaultAddress(@Param('addressId') addressId: number, @Req() req: any) {
+    const userId = req.user.user_id;
+    return this.userService.updateDefaultAddress(addressId, userId);
   }
 
   @Delete('address/:addressId')
