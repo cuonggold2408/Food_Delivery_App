@@ -150,7 +150,11 @@ export class CartRepository {
 
       // Tính tổng tiền của các options được chọn
       let totalOptionPrice = 0;
-      if (customizations && customizations.length > 0) {
+      if (
+        customizations &&
+        customizations.length > 0 &&
+        customizations[0] !== null
+      ) {
         // Duyệt qua từng category và options của món ăn
         checkItemInRestaurant.customizationMappings.forEach((mapping) => {
           mapping.category.options.forEach((option) => {
@@ -180,7 +184,12 @@ export class CartRepository {
       await this.cartItemRepository.save(newCartItem);
 
       // Thêm customizations nếu có
-      if (customizations && customizations.length > 0) {
+
+      if (
+        customizations &&
+        customizations.length > 0 &&
+        customizations[0] !== null
+      ) {
         const customizationsToSave = await Promise.all(
           customizations.map(async (customization) => {
             // Tìm option trong database để lấy giá
@@ -202,7 +211,8 @@ export class CartRepository {
       }
 
       return 'Thêm sản phẩm vào giỏ hàng thành công';
-    } catch {
+    } catch (error) {
+      console.log('error: ', error);
       throw new BadRequestException('Có lỗi xảy ra');
     }
   }
@@ -230,7 +240,7 @@ export class CartRepository {
   async getCart(user_id: number, restaurantId: string) {
     const cart = await this.cartRepository.findOne({
       where: { user: { user_id }, restaurant: { restaurant_id: restaurantId } },
-      relations: ['items', 'items.customizations.option'],
+      relations: ['items', 'items.customizations.option', 'restaurant'],
     });
     if (!cart) {
       return null;
@@ -269,6 +279,7 @@ export class CartRepository {
     return {
       quantity_item,
       total_pay: total_pay.toString(),
+      restaurant_name: cart.restaurant.name,
       items,
     };
   }

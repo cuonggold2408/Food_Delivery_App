@@ -19,7 +19,7 @@ export interface SaveAddressResponse {
     recipient_name: string;
     street_address: string;
     apartment: string;
-    // is_default: boolean;
+    is_default: boolean;
     latitude: number;
     longitude: number;
   };
@@ -38,7 +38,6 @@ export class UserService {
       phone_number,
       recipient_name,
       street_address,
-      // is_default,
       apartment,
       latitude,
       longitude,
@@ -70,10 +69,10 @@ export class UserService {
         recipient_name,
         label,
         street_address,
-        // is_default,
         apartment,
         latitude,
         longitude,
+        is_default: false,
       },
       user_id,
     );
@@ -90,6 +89,7 @@ export class UserService {
         apartment: newAddress.apartment,
         latitude: newAddress.latitude,
         longitude: newAddress.longitude,
+        is_default: newAddress.is_default,
       },
     };
   }
@@ -122,6 +122,13 @@ export class UserService {
       addressId,
       userId,
       body,
+    );
+  }
+
+  async updateDefaultAddress(addressId: number, userId: number) {
+    return await this.userAddressRepository.updateDefaultAddress(
+      addressId,
+      userId,
     );
   }
 
