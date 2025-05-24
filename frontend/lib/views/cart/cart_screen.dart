@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/views/order/order_screen.dart';
 
 void main() {
   runApp(MyApp());
@@ -132,7 +133,12 @@ class CartScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 16),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => OrderScreen()),
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
                     minimumSize: Size(double.infinity, 50),
@@ -164,7 +170,8 @@ class CartItem extends StatelessWidget {
   final String size;
   final int quantity;
 
-  const CartItem({super.key, 
+  const CartItem({
+    super.key,
     required this.name,
     required this.price,
     required this.size,

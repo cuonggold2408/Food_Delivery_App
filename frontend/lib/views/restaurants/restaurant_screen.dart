@@ -45,6 +45,7 @@ class _RestaurantScreenState extends State<RestaurantScreen> {
         if (jsonData['data'] == null) {
           throw Exception('Invalid API response: "data" field is missing');
         }
+        print(jsonData['data']);
         setState(() {
           _restaurantData = jsonData['data'];
           _isLoading = false;
