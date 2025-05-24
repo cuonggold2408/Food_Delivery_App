@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/views/cart/draft_screen.dart';
-import 'package:frontend/views/home/home_screen.dart';
 import 'package:frontend/views/settings/menu.dart';
 import 'package:frontend/views/auth/login_screen.dart';
 import 'package:frontend/views/auth/register_screen.dart';
 import 'package:frontend/views/home/product_details_screen.dart';
 import 'package:frontend/views/auth/otp_verification_screen.dart';
 import 'package:frontend/views/home/home_screen.dart';
+// Ensure that the HomeScreen class exists in the imported file above.
 void main() {
   runApp(const MyApp());
 }
