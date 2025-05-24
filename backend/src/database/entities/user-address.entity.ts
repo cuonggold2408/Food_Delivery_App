@@ -42,8 +42,8 @@ export class UserAddress {
   @Column({ type: 'varchar', length: 50, nullable: true })
   apartment: string;
 
-  // @Column({ type: 'boolean', default: false })
-  // is_default: boolean;
+  @Column({ type: 'boolean', default: false })
+  is_default: boolean;
 
   @Column('decimal', { precision: 10, scale: 8 })
   latitude: number;

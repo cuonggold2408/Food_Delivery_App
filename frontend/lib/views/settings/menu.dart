@@ -1,11 +1,7 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
-
 import 'package:frontend/views/settings/profile_screen.dart';
-import 'address_screen.dart'; // Import màn hình Addresses
-
-import 'package:frontend/views/settings/add_address.dart'; // Import màn hình Addresses
+import 'package:frontend/views/settings/address_screen.dart'; // Import màn hình Addresses
 import 'package:frontend/conponents/custom_snack_bar.dart';
 import 'package:frontend/conponents/top_snack_bar.dart';
 import 'package:frontend/services/api_service.dart';
@@ -127,79 +123,145 @@ class _MenuState extends State<Menu> {
                   _MenuItemData(
                     icon: Icons.person,
                     title: 'Personal Info',
-                    onTap: () {
-                      // Điều hướng đến màn hình Personal Info
-                      Navigator.push(
-                        context,
-                        PageRouteBuilder(
-                          pageBuilder:
-                              (context, animation, secondaryAnimation) =>
-                                  const ProfileScreen(),
-                          transitionsBuilder: (
-                            context,
-                            animation,
-                            secondaryAnimation,
-                            child,
-                          ) {
-                            const begin = Offset(
-                              1.0,
-                              0.0,
-                            ); // Bắt đầu từ bên trái
-                            const end = Offset.zero; // Kết thúc ở giữa màn hình
-                            const curve = Curves.easeInOut;
-
-                            var tween = Tween(
-                              begin: begin,
-                              end: end,
-                            ).chain(CurveTween(curve: curve));
-                            var offsetAnimation = animation.drive(tween);
-
-                            return SlideTransition(
-                              position: offsetAnimation,
-                              child: child,
-                            );
-                          },
-                          transitionDuration: const Duration(
-                            milliseconds: 300,
-                          ), // Thời gian chuyển trang
-                        ),
-                      );
+                    onTap: () async {
+                      final accessToken = await _getAccessToken();
+                      if (accessToken == null) {
+                        // Chưa đăng nhập: Hiển thị popup yêu cầu đăng nhập
+                        showDialog(
+                          context: context,
+                          builder:
+                              (context) => AlertDialog(
+                                title: const Text('Yêu cầu đăng nhập'),
+                                content: const Text(
+                                  'Vui lòng đăng nhập để xem thông tin cá nhân.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Hủy'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      Navigator.pushNamed(context, '/login');
+                                    },
+                                    child: const Text('Đăng nhập'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      Navigator.pushNamed(context, '/register');
+                                    },
+                                    child: const Text('Đăng ký'),
+                                  ),
+                                ],
+                              ),
+                        );
+                      } else {
+                        // Đã đăng nhập: Điều hướng đến ProfileScreen
+                        Navigator.push(
+                          context,
+                          PageRouteBuilder(
+                            pageBuilder:
+                                (context, animation, secondaryAnimation) =>
+                                    const ProfileScreen(),
+                            transitionsBuilder: (
+                              context,
+                              animation,
+                              secondaryAnimation,
+                              child,
+                            ) {
+                              const begin = Offset(1.0, 0.0);
+                              const end = Offset.zero;
+                              const curve = Curves.easeInOut;
+                              var tween = Tween(
+                                begin: begin,
+                                end: end,
+                              ).chain(CurveTween(curve: curve));
+                              var offsetAnimation = animation.drive(tween);
+                              return SlideTransition(
+                                position: offsetAnimation,
+                                child: child,
+                              );
+                            },
+                            transitionDuration: const Duration(
+                              milliseconds: 300,
+                            ),
+                          ),
+                        );
+                      }
                     },
                   ),
                   _MenuItemData(
                     icon: Icons.location_on,
                     title: 'Addresses',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        PageRouteBuilder(
-                          pageBuilder:
-                              (context, animation, secondaryAnimation) =>
-                                  const AddressesScreen(),
-                          transitionsBuilder: (
-                            context,
-                            animation,
-                            secondaryAnimation,
-                            child,
-                          ) {
-                            const begin = Offset(1.0, 0.0);
-                            const end = Offset.zero;
-                            const curve = Curves.easeInOut;
-
-                            var tween = Tween(
-                              begin: begin,
-                              end: end,
-                            ).chain(CurveTween(curve: curve));
-                            var offsetAnimation = animation.drive(tween);
-
-                            return SlideTransition(
-                              position: offsetAnimation,
-                              child: child,
-                            );
-                          },
-                          transitionDuration: const Duration(milliseconds: 300),
-                        ),
-                      );
+                    onTap: () async {
+                      final accessToken = await _getAccessToken();
+                      if (accessToken == null) {
+                        // Chưa đăng nhập: Hiển thị popup yêu cầu đăng nhập
+                        showDialog(
+                          context: context,
+                          builder:
+                              (context) => AlertDialog(
+                                title: const Text('Yêu cầu đăng nhập'),
+                                content: const Text(
+                                  'Vui lòng đăng nhập để quản lý địa chỉ.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Hủy'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      Navigator.pushNamed(context, '/login');
+                                    },
+                                    child: const Text('Đăng nhập'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      Navigator.pushNamed(context, '/register');
+                                    },
+                                    child: const Text('Đăng ký'),
+                                  ),
+                                ],
+                              ),
+                        );
+                      } else {
+                        // Đã đăng nhập: Điều hướng đến AddressesScreen
+                        Navigator.push(
+                          context,
+                          PageRouteBuilder(
+                            pageBuilder:
+                                (context, animation, secondaryAnimation) =>
+                                    const AddressesScreen(),
+                            transitionsBuilder: (
+                              context,
+                              animation,
+                              secondaryAnimation,
+                              child,
+                            ) {
+                              const begin = Offset(1.0, 0.0);
+                              const end = Offset.zero;
+                              const curve = Curves.easeInOut;
+                              var tween = Tween(
+                                begin: begin,
+                                end: end,
+                              ).chain(CurveTween(curve: curve));
+                              var offsetAnimation = animation.drive(tween);
+                              return SlideTransition(
+                                position: offsetAnimation,
+                                child: child,
+                              );
+                            },
+                            transitionDuration: const Duration(
+                              milliseconds: 300,
+                            ),
+                          ),
+                        );
+                      }
                     },
                   ),
                 ],

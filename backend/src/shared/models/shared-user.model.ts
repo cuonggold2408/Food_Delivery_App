@@ -47,6 +47,7 @@ export const UserAddressSchema = z.object({
   phone_number: z.string().max(20),
   recipient_name: z.string().max(100),
   street_address: z.string().max(255),
+  is_default: z.boolean().default(false),
   apartment: z.string().max(100).optional(),
   label: z.nativeEnum(AddressLabel),
   latitude: z.number(),

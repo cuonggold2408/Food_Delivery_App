@@ -5,8 +5,30 @@ import { SearchRepository } from 'src/routes/search/search.repo';
 export class SearchService {
   constructor(private readonly serviceRepository: SearchRepository) {}
 
-  async search(query: string, limit: number, page: number) {
+  async search(
+    latitude: number,
+    longitude: number,
+    query: string,
+    limit: number,
+    page: number,
+    radiusInMeters: number,
+    minRating?: number,
+    minPrice?: number,
+    maxPrice?: number,
+    nearMe?: boolean,
+  ) {
     const skip = (page - 1) * limit;
-    return this.serviceRepository.search(query, limit, skip);
+    return this.serviceRepository.search(
+      latitude,
+      longitude,
+      query,
+      limit,
+      skip,
+      radiusInMeters,
+      minRating,
+      minPrice,
+      maxPrice,
+      nearMe,
+    );
   }
 }

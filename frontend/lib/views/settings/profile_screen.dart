@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/views/settings/edit_profile.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:frontend/services/api_service.dart';
+import 'package:frontend/views/settings/user_profile_data.dart'; // Import UserProfile
 
 // Các hằng số cho màu sắc, kích thước và khoảng cách
 const double _avatarRadius = 40.0;
@@ -6,18 +11,38 @@ const double _infoIconRadius = 20.0;
 const double _spacing = 16.0;
 const double _smallSpacing = 4.0;
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
-  // Thông tin người dùng (có thể lấy từ API hoặc provider sau này)
-  static const String _fullName = 'Vishal Khadok';
-  static const String _description = 'I love fast food';
-  static const String _email = 'hello@halalab.co';
-  static const String _phoneNumber = '408-841-0926';
+  @override
+  _ProfileScreenState createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  // Hàm gọi API để lấy thông tin hồ sơ người dùng
+  Future<UserProfile> _fetchUserProfile() async {
+    final token = await ApiService.getToken();
+    if (token == null) {
+      throw Exception('No token found');
+    }
+
+    final response = await http.get(
+      Uri.parse('http://10.0.2.2:3000/user/profile'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    print(response.body);
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+      final Map<String, dynamic> data = jsonResponse['data'] ?? jsonResponse;
+      return UserProfile.fromJson(data);
+    } else {
+      throw Exception('Failed to load profile: ${response.statusCode}');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Sử dụng ThemeData để lấy màu sắc và kiểu chữ
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
@@ -34,77 +59,124 @@ class ProfileScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
-          TextButton(
-            onPressed: () {
-              // Logic cho nút "EDIT" (có thể mở form chỉnh sửa)
+          FutureBuilder<UserProfile>(
+            future: _fetchUserProfile(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting ||
+                  snapshot.hasError) {
+                // Ẩn nút "EDIT" khi đang tải hoặc có lỗi
+                return const SizedBox.shrink();
+              }
+              final userProfile = snapshot.data!;
+              return TextButton(
+                onPressed: () {
+                  // Điều hướng sang màn hình EditProfileScreen với userProfile
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (context) =>
+                              EditProfileScreen(userProfile: userProfile),
+                    ),
+                  ).then((result) {
+                    if (result == true) {
+                      setState(() {}); // Làm mới dữ liệu sau khi chỉnh sửa
+                    }
+                  });
+                },
+                child: const Text(
+                  'EDIT',
+                  style: TextStyle(
+                    color: Colors.orange,
+                    decoration: TextDecoration.underline,
+                    decorationColor: Colors.orange,
+                  ),
+                ),
+              );
             },
-            child: const Text(
-              'EDIT',
-              style: TextStyle(
-                color: Colors.orange,
-                decoration: TextDecoration.underline,
-                decorationColor: Colors.orange,
-              ),
-            ),
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(_spacing),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Phần Avatar và thông tin người dùng
-            _buildUserInfoSection(textTheme),
-            const SizedBox(height: _spacing * 2),
-            // Phần thông tin chi tiết được bao quanh bởi container
-            Container(
-              padding: const EdgeInsets.all(_spacing),
-              decoration: BoxDecoration(
-                color: Color(0xFFF6F8FA),
-                borderRadius: BorderRadius.circular(16.0),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 2,
-                    blurRadius: 5,
-                    offset: const Offset(0, 3), // Hiệu ứng bóng đổ
-                  ),
-                ],
-              ),
+      body: FutureBuilder<UserProfile>(
+        future: _fetchUserProfile(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildInfoRow(
-                    icon: Icons.person,
-                    label: 'FULL NAME',
-                    value: _fullName,
-                    textTheme: textTheme,
-                  ),
-                  const SizedBox(height: _spacing),
-                  _buildInfoRow(
-                    icon: Icons.email,
-                    label: 'EMAIL',
-                    value: _email,
-                    textTheme: textTheme,
-                  ),
-                  const SizedBox(height: _spacing),
-                  _buildInfoRow(
-                    icon: Icons.phone,
-                    label: 'PHONE NUMBER',
-                    value: _phoneNumber,
-                    textTheme: textTheme,
+                  Text('Error: ${snapshot.error}'),
+                  const SizedBox(height: 16.0),
+                  ElevatedButton(
+                    onPressed: () => setState(() {}),
+                    child: const Text('Retry'),
                   ),
                 ],
               ),
+            );
+          }
+          final userProfile = snapshot.data!;
+          return Padding(
+            padding: const EdgeInsets.all(_spacing),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Phần Avatar và thông tin người dùng
+                _buildUserInfoSection(textTheme, userProfile),
+                const SizedBox(height: _spacing * 2),
+                // Phần thông tin chi tiết được bao quanh bởi container
+                Container(
+                  padding: const EdgeInsets.all(_spacing),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF6F8FA),
+                    borderRadius: BorderRadius.circular(16.0),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        spreadRadius: 2,
+                        blurRadius: 5,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      _buildInfoRow(
+                        icon: Icons.person,
+                        label: 'FULL NAME',
+                        value: userProfile.fullName,
+                        textTheme: textTheme,
+                      ),
+                      const SizedBox(height: _spacing),
+                      _buildInfoRow(
+                        icon: Icons.email,
+                        label: 'EMAIL',
+                        value: userProfile.email,
+                        textTheme: textTheme,
+                      ),
+                      const SizedBox(height: _spacing),
+                      _buildInfoRow(
+                        icon: Icons.phone,
+                        label: 'PHONE NUMBER',
+                        value: userProfile.phoneNumber,
+                        textTheme: textTheme,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
   // Widget hiển thị phần Avatar và thông tin người dùng
-  Widget _buildUserInfoSection(TextTheme textTheme) {
+  Widget _buildUserInfoSection(TextTheme textTheme, UserProfile userProfile) {
     return Row(
       children: [
         CircleAvatar(
@@ -117,13 +189,13 @@ class ProfileScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              _fullName,
+              userProfile.fullName,
               style: textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             Text(
-              _description,
+              userProfile.bio,
               style: textTheme.bodyMedium?.copyWith(color: Colors.grey),
             ),
           ],

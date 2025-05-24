@@ -13,6 +13,7 @@ import { UserModule } from './routes/user/user.module';
 import { RestaurantModule } from 'src/routes/restaurant/restaurant.module';
 import { SearchModule } from './routes/search/search.module';
 import { CartModule } from './routes/cart/cart.module';
+import { ShippingModule } from './routes/shipping/shipping.module';
 
 
 @Module({
@@ -27,6 +28,7 @@ import { CartModule } from './routes/cart/cart.module';
     RestaurantModule,
     SearchModule,
     CartModule,
+    ShippingModule,
   ],
   controllers: [AppController],
   providers: [

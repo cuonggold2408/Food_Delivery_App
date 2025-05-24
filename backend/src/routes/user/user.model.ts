@@ -13,6 +13,7 @@ export const UserAddressBodySchema = UserAddressSchema.pick({
   apartment: true,
   latitude: true,
   longitude: true,
+  is_default: true,
 }).strict();
 export type UserAddressBodyType = z.infer<typeof UserAddressBodySchema>;
 
