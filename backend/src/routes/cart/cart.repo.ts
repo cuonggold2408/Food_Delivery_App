@@ -240,8 +240,15 @@ export class CartRepository {
   async getCart(user_id: number, restaurantId: string) {
     const cart = await this.cartRepository.findOne({
       where: { user: { user_id }, restaurant: { restaurant_id: restaurantId } },
-      relations: ['items', 'items.customizations.option', 'restaurant'],
+      relations: [
+        'items',
+        'items.customizations.option',
+        'restaurant',
+        'restaurant.promotions',
+      ],
     });
+    console.log('cart: ', cart);
+
     if (!cart) {
       return null;
     }
@@ -280,6 +287,7 @@ export class CartRepository {
       quantity_item,
       total_pay: total_pay.toString(),
       restaurant_name: cart.restaurant.name,
+      promotions: cart.restaurant.promotions,
       items,
     };
   }
