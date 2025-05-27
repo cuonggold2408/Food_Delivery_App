@@ -11,22 +11,24 @@ import {
   AuthTypeDecoratorPayload,
 } from 'src/shared/decorators/auth.decorator';
 import { AccessTokenGuard } from 'src/shared/guards/access-token.guard';
-import { ApiKeyGuard } from 'src/shared/guards/api-key.guard';
+import { PaymentApiKeyGuard } from 'src/shared/guards/payment-api-key.guard';
 
 @Injectable()
 export class AuthenticationGuard implements CanActivate {
-  private readonly authTypeGuardMap: Record<string, CanActivate> = {
-    [AuthType.Bearer]: this.accessTokenGuard,
-    [AuthType.APIKey]: this.apiKeyGuard,
-    [AuthType.None]: {
-      canActivate: () => true,
-    },
-  };
+  private readonly authTypeGuardMap: Record<string, CanActivate>;
   constructor(
     private readonly reflector: Reflector,
     private readonly accessTokenGuard: AccessTokenGuard,
-    private readonly apiKeyGuard: ApiKeyGuard,
-  ) {}
+    private readonly paymentApiKeyGuard: PaymentApiKeyGuard,
+  ) {
+    this.authTypeGuardMap = {
+      [AuthType.Bearer]: this.accessTokenGuard,
+      [AuthType.PaymentAPIKey]: this.paymentApiKeyGuard,
+      [AuthType.None]: {
+        canActivate: () => true,
+      },
+    };
+  }
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const authTypeValue = this.reflector.getAllAndOverride<
       AuthTypeDecoratorPayload | undefined

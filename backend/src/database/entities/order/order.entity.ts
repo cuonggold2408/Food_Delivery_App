@@ -19,12 +19,6 @@ export enum OrderStatus {
   CANCELLED = 'CANCELLED',
 }
 
-export enum PaymentStatus {
-  PENDING = 'PENDING',
-  SUCCESS = 'SUCCESS',
-  FAILED = 'FAILED',
-}
-
 export enum DeliveryMethod {
   STANDARD = 'STANDARD',
   EXPRESS = 'EXPRESS',

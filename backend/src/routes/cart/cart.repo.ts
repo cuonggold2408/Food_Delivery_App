@@ -274,9 +274,13 @@ export class CartRepository {
         : '';
 
       return {
+        item_id: item.menuItem.item_id,
         image_dish: item.menuItem.image_url,
         name_dish: item.menuItem.name,
         option_name: option_names, // Tên các option
+        option_id: item.customizations.map(
+          (customization) => customization.option_id,
+        ),
         message: item.message || '', // Nếu có message
         total_pay: parseFloat(item.total_pay).toFixed(0).toString(),
         quantity: item.quantity,
