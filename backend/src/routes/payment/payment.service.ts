@@ -7,6 +7,8 @@ export class PaymentService {
   constructor(private readonly paymentRepository: PaymentRepository) {}
 
   async receiver(body: WebhookPaymentBodyDTO) {
-    return this.paymentRepository.receiver(body);
+    const result = await this.paymentRepository.receiver(body);
+
+    return result;
   }
 }

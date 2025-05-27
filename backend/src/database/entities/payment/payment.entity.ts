@@ -1,4 +1,5 @@
-import { Order, PaymentStatus } from 'src/database/entities/order/order.entity';
+import { Order } from 'src/database/entities/order/order.entity';
+import { PaymentStatus } from 'src/shared/constants/payment.constant';
 import {
   Entity,
   PrimaryGeneratedColumn,

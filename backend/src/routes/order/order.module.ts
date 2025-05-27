@@ -7,10 +7,18 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Payment } from 'src/database/entities/payment/payment.entity';
 import { Cart } from 'src/database/entities/cart/cart.entity';
 import { CartItem } from 'src/database/entities/cart/cart-item.entity';
+import { BullModule } from '@nestjs/bullmq';
+import { PAYMENT_QUEUE_NAME } from 'src/shared/constants/queue.constant';
+import { OrderProducer } from 'src/routes/order/order.producer';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Order, Payment, Cart, CartItem])],
+  imports: [
+    TypeOrmModule.forFeature([Order, Payment, Cart, CartItem]),
+    BullModule.registerQueue({
+      name: PAYMENT_QUEUE_NAME,
+    }),
+  ],
   controllers: [OrderController],
-  providers: [OrderService, OrderRepository],
+  providers: [OrderService, OrderRepository, OrderProducer],
 })
 export class OrderModule {}

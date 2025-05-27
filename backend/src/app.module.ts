@@ -16,6 +16,9 @@ import { CartModule } from 'src/routes/cart/cart.module';
 import { ShippingModule } from 'src/routes/shipping/shipping.module';
 import { PaymentModule } from 'src/routes/payment/payment.module';
 import { OrderModule } from './routes/order/order.module';
+import { BullModule } from '@nestjs/bullmq';
+import { PaymentConsumer } from 'src/queues/payment.consumer';
+import envConfig from 'src/shared/config';
 
 @Module({
   imports: [
@@ -25,6 +28,11 @@ import { OrderModule } from './routes/order/order.module';
     UserModule,
     ConfigModule.forRoot({
       isGlobal: true,
+    }),
+    BullModule.forRoot({
+      connection: {
+        url: envConfig.REDIS_URL,
+      },
     }),
     RestaurantModule,
     SearchModule,
@@ -48,6 +56,7 @@ import { OrderModule } from './routes/order/order.module';
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
     },
+    PaymentConsumer,
   ],
 })
 export class AppModule {}

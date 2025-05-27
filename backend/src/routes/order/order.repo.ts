@@ -9,6 +9,7 @@ import { Cart } from 'src/database/entities/cart/cart.entity';
 import { Order, OrderStatus } from 'src/database/entities/order/order.entity';
 import { Payment } from 'src/database/entities/payment/payment.entity';
 import { CreateOrderDTO } from 'src/routes/order/order.dto';
+import { OrderProducer } from 'src/routes/order/order.producer';
 import { DeepPartial, Repository } from 'typeorm';
 
 @Injectable()
@@ -25,6 +26,8 @@ export class OrderRepository {
 
     @InjectRepository(CartItem)
     private readonly cartItemRepository: Repository<CartItem>,
+
+    private readonly orderProducer: OrderProducer,
   ) {}
 
   async createOrder(body: CreateOrderDTO, userId: number) {
@@ -79,6 +82,7 @@ export class OrderRepository {
 
     const newPayment = this.paymentRepository.create();
     await this.paymentRepository.save(newPayment);
+    await this.orderProducer.addCancelPaymentJob(newPayment.payment_id);
 
     const orderData = {
       user: { user_id: userId },
@@ -108,6 +112,6 @@ export class OrderRepository {
       restaurant: { restaurant_id: body.restaurant_id.toString() },
     });
 
-    return 'Tạo đơn hàng thành công';
+    return order;
   }
 }
