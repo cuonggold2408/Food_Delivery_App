@@ -10,6 +10,7 @@ import { Order, OrderStatus } from 'src/database/entities/order/order.entity';
 import { Payment } from 'src/database/entities/payment/payment.entity';
 import { CreateOrderDTO } from 'src/routes/order/order.dto';
 import { OrderProducer } from 'src/routes/order/order.producer';
+import envConfig from 'src/shared/config';
 import { DeepPartial, Repository } from 'typeorm';
 
 @Injectable()
@@ -35,14 +36,20 @@ export class OrderRepository {
       throw new UnauthorizedException('Unauthorized');
     }
 
-    const orderExist = await this.orderRepository.findOne({
+    const orderExist = await this.orderRepository.find({
       where: {
         user: { user_id: userId },
         restaurant: { restaurant_id: body.restaurant_id.toString() },
       },
     });
 
-    if (orderExist?.order_status === OrderStatus.PENDING_PAYMENT) {
+    console.log('orderExist: ', orderExist);
+
+    if (
+      orderExist.length > 0 &&
+      orderExist[orderExist.length - 1]?.order_status ===
+        OrderStatus.PENDING_PAYMENT
+    ) {
       throw new BadRequestException(
         'You already have a pending payment order. Please complete or cancel it before creating a new order.',
       );
@@ -112,6 +119,11 @@ export class OrderRepository {
       restaurant: { restaurant_id: body.restaurant_id.toString() },
     });
 
-    return order;
+    const qrLink = `https://qr.sepay.vn/img?acc=${envConfig.ACC_BANK}&bank=${envConfig.SHORT_BANK}&amount=${order.total_amount}&des=DH${order.payment.payment_id}`;
+
+    return {
+      qr_link: qrLink,
+      time_out: new Date(Date.now() + 1000 * 60 * 10),
+    };
   }
 }

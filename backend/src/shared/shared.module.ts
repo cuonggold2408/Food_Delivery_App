@@ -22,6 +22,8 @@ import { SeedService } from 'src/shared/services/seed.service';
 import { TokenService } from 'src/shared/services/token.service';
 import { SharedPaymentRepository } from 'src/shared/repositories/shared-payment.repo';
 import { Payment } from 'src/database/entities/payment/payment.entity';
+import { SharedWebSocketRepository } from 'src/shared/repositories/shared-websocket.repo';
+import { WebSocket } from 'src/database/entities/websocket/websocket.entity';
 
 const sharedServices = [
   HashingService,
@@ -30,6 +32,7 @@ const sharedServices = [
   EmailService,
   SeedService,
   SharedPaymentRepository,
+  SharedWebSocketRepository,
 ];
 
 @Global()
@@ -58,6 +61,7 @@ const sharedServices = [
       ItemCustomizationCategory,
       MenuCategory,
       Payment,
+      WebSocket,
     ]),
   ],
 })

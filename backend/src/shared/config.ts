@@ -22,6 +22,8 @@ const configSchema = z.object({
   OTP_EXPIRES_IN: z.string(),
   RESEND_API_KEY: z.string(),
   REDIS_URL: z.string(),
+  ACC_BANK: z.string(),
+  SHORT_BANK: z.string(),
 });
 
 const configServer = configSchema.safeParse(process.env);

@@ -49,88 +49,91 @@ export class PaymentRepository {
     if (uniquePaymentTransaction) {
       throw new BadRequestException('Payment transaction already exists');
     }
-    await this.entityManager.transaction(async (transactionalEntityManager) => {
-      const paymentTransaction = new PaymentTransaction();
-      paymentTransaction.id = body.id;
-      paymentTransaction.gateway = body.gateway;
-      paymentTransaction.transaction_date = parse(
-        body.transactionDate,
-        'yyyy-MM-dd HH:mm:ss',
-        new Date(),
-      );
-      paymentTransaction.account_number = body.accountNumber?.toString() ?? '';
-      paymentTransaction.sub_account = body.subAccount?.toString() ?? '';
-      paymentTransaction.amount_in = amount_in.toString();
-      paymentTransaction.amount_out = amount_out.toString();
-      paymentTransaction.accumulated = body.accumulated.toString();
-      paymentTransaction.code = body.code?.toString() ?? '';
-      paymentTransaction.transaction_content = body.content?.toString() ?? '';
-      paymentTransaction.reference_number =
-        body.referenceCode?.toString() ?? '';
-      paymentTransaction.body = body.description;
-
-      console.log('paymentTransaction: ', paymentTransaction);
-
-      // Lưu vào database
-      await this.paymentTransactionRepository.save(paymentTransaction);
-
-      // 2. Kiểm tra nội dung chuyển khoản và tổng số tiền có khớp hay không
-      const paymentId = body.code
-        ? Number(body.code.split(PREFIX_PAYMENT_CODE)[1])
-        : Number(body.content?.split(PREFIX_PAYMENT_CODE)[1]);
-
-      if (isNaN(paymentId)) {
-        throw new BadRequestException('Cannot get payment id from content');
-      }
-
-      const payment = await transactionalEntityManager.findOne(Payment, {
-        where: {
-          payment_id: paymentId,
-        },
-        relations: ['orders'],
-      });
-
-      if (!payment) {
-        throw new BadRequestException(
-          'Cannot find payment with id: ' + paymentId,
+    const userId = await this.entityManager.transaction(
+      async (transactionalEntityManager) => {
+        const paymentTransaction = new PaymentTransaction();
+        paymentTransaction.id = body.id;
+        paymentTransaction.gateway = body.gateway;
+        paymentTransaction.transaction_date = parse(
+          body.transactionDate,
+          'yyyy-MM-dd HH:mm:ss',
+          new Date(),
         );
-      }
+        paymentTransaction.account_number =
+          body.accountNumber?.toString() ?? '';
+        paymentTransaction.sub_account = body.subAccount?.toString() ?? '';
+        paymentTransaction.amount_in = amount_in.toString();
+        paymentTransaction.amount_out = amount_out.toString();
+        paymentTransaction.accumulated = body.accumulated.toString();
+        paymentTransaction.code = body.code?.toString() ?? '';
+        paymentTransaction.transaction_content = body.content?.toString() ?? '';
+        paymentTransaction.reference_number =
+          body.referenceCode?.toString() ?? '';
+        paymentTransaction.body = body.description;
 
-      const { orders } = payment;
+        // Lưu vào database
+        await this.paymentTransactionRepository.save(paymentTransaction);
 
-      // 3. Kiểm tra tổng số tiền có khớp hay không
-      const totalAmount = Number(
-        orders.reduce((acc, order) => acc + Number(order.total_amount), 0),
-      );
+        // 2. Kiểm tra nội dung chuyển khoản và tổng số tiền có khớp hay không
+        const paymentId = body.code
+          ? Number(body.code.split(PREFIX_PAYMENT_CODE)[1])
+          : Number(body.content?.split(PREFIX_PAYMENT_CODE)[1]);
 
-      if (totalAmount !== body.transferAmount) {
-        throw new BadRequestException('Tổng số tiền không khớp');
-      }
+        if (isNaN(paymentId)) {
+          throw new BadRequestException('Cannot get payment id from content');
+        }
 
-      // 4. Cập nhật trạng thái thanh toán
-      // Cập nhật Payment
-      await transactionalEntityManager.update(
-        Payment,
-        {
-          payment_id: paymentId,
-        },
-        {
-          payment_status: PaymentStatus.SUCCESS,
-        },
-      );
+        const payment = await transactionalEntityManager.findOne(Payment, {
+          where: {
+            payment_id: paymentId,
+          },
+          relations: ['orders', 'orders.user'],
+        });
 
-      // Cập nhật tất cả Order liên quan
-      await transactionalEntityManager.update(
-        Order,
-        { order_id: In(orders.map((order) => order.order_id)) },
-        { order_status: OrderStatus.PENDING_PICKUP },
-      );
+        if (!payment) {
+          throw new BadRequestException(
+            'Cannot find payment with id: ' + paymentId,
+          );
+        }
 
-      await this.paymentProducer.removeJob(paymentId);
-    });
+        const userId = payment.orders[0].user.user_id;
 
-    return {
-      message: 'Payment successful',
-    };
+        const { orders } = payment;
+
+        // 3. Kiểm tra tổng số tiền có khớp hay không
+        const totalAmount = Number(
+          orders.reduce((acc, order) => acc + Number(order.total_amount), 0),
+        );
+
+        if (totalAmount !== body.transferAmount) {
+          throw new BadRequestException('Tổng số tiền không khớp');
+        }
+
+        // 4. Cập nhật trạng thái thanh toán
+        // Cập nhật Payment
+        await transactionalEntityManager.update(
+          Payment,
+          {
+            payment_id: paymentId,
+          },
+          {
+            payment_status: PaymentStatus.SUCCESS,
+          },
+        );
+
+        // Cập nhật tất cả Order liên quan
+        await transactionalEntityManager.update(
+          Order,
+          { order_id: In(orders.map((order) => order.order_id)) },
+          { order_status: OrderStatus.PENDING_PICKUP },
+        );
+
+        await this.paymentProducer.removeJob(paymentId);
+
+        return userId;
+      },
+    );
+
+    return userId;
   }
 }

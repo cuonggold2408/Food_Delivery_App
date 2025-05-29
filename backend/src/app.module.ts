@@ -19,6 +19,7 @@ import { OrderModule } from './routes/order/order.module';
 import { BullModule } from '@nestjs/bullmq';
 import { PaymentConsumer } from 'src/queues/payment.consumer';
 import envConfig from 'src/shared/config';
+import { WebsocketModule } from 'src/websockets/websocket.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import envConfig from 'src/shared/config';
     ShippingModule,
     PaymentModule,
     OrderModule,
+    WebsocketModule,
   ],
   controllers: [AppController],
   providers: [
