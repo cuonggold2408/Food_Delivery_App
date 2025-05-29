@@ -100,10 +100,11 @@ export class OrderRepository {
       subtotal: body.subtotal,
       delivery_fee: body.delivery_fee,
       discount: body.discount || '0',
-      total_amount:
+      total_amount: (
         Number(body.subtotal) +
         Number(body.delivery_fee) -
-        Number(body.discount || '0'),
+        Number(body.discount || '0')
+      ).toString(),
       payment_method: body.payment_method,
       // estimated_delivery_time: body?.estimated_delivery_time,
       delivery_method: body.delivery_method,
