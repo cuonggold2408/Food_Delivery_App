@@ -42,8 +42,7 @@ jobs:
           script: |
             export NVM_DIR=~/.nvm
             source ~/.nvm/nvm.sh
-            BACKEND_DIR="$HOME/backend"
-            cd /backend
+            cd ~/Food_Delivery_App/backend
             git fetch --all
             git reset --hard origin/main  
             echo "${{secrets.ENV_PRODUCTION}}" > .env
