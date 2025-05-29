@@ -31,7 +31,7 @@ async function bootstrap() {
   });
 
   const webSocketAdapter = new WebSocketAdapter(app);
-  await webSocketAdapter.connectToRedis();
+  // await webSocketAdapter.connectToRedis();
 
   app.useWebSocketAdapter(webSocketAdapter);
 
