@@ -45,6 +45,10 @@ jobs:
           script: |
             export NVM_DIR=~/.nvm
             source ~/.nvm/nvm.sh
+            if [ ! -d "~/backend" ]; then
+              echo "Backend directory does not exist. Exiting."
+              exit 1
+            fi
             cd ~/backend
             git fetch --all
             git reset --hard origin/main  
