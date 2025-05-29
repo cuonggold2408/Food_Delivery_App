@@ -7,7 +7,7 @@ import {
 import envConfig from 'src/shared/config';
 
 @Injectable()
-export class PaymentAPIKeyGuard implements CanActivate {
+export class PaymentApiKeyGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
     const paymentApiKey = request.headers['authorization']?.split(' ')[1];
