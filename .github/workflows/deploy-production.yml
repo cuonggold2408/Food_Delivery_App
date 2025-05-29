@@ -46,6 +46,7 @@ jobs:
             git fetch --all
             git reset --hard origin/main  
             echo "${{secrets.ENV_PRODUCTION}}" > .env
+            export NODE_ENV=production
             npm install --force
             npm run build
             pm2 restart Nestjs Delivery App
