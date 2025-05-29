@@ -16,9 +16,9 @@ import { CartModule } from 'src/routes/cart/cart.module';
 import { ShippingModule } from 'src/routes/shipping/shipping.module';
 import { PaymentModule } from 'src/routes/payment/payment.module';
 import { OrderModule } from './routes/order/order.module';
-// import { BullModule } from '@nestjs/bullmq';
+import { BullModule } from '@nestjs/bullmq';
 import { PaymentConsumer } from 'src/queues/payment.consumer';
-// import envConfig from 'src/shared/config';
+import envConfig from 'src/shared/config';
 import { WebsocketModule } from 'src/websockets/websocket.module';
 
 @Module({
@@ -30,11 +30,11 @@ import { WebsocketModule } from 'src/websockets/websocket.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    // BullModule.forRoot({
-    //   connection: {
-    //     url: envConfig.REDIS_URL,
-    //   },
-    // }),
+    BullModule.forRoot({
+      connection: {
+        url: envConfig.REDIS_URL,
+      },
+    }),
     RestaurantModule,
     SearchModule,
     CartModule,
