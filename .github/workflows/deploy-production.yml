@@ -3,12 +3,12 @@ name: Deploy Production
 on:
   push:
     paths:
-      - 'backend/**'
-    branches: ['main']
+      - "backend/**"
+    branches: ["main"]
   pull_request:
     paths:
-      - 'backend/**'
-    branches: ['main']
+      - "backend/**"
+    branches: ["main"]
 
 jobs:
   build:
@@ -22,8 +22,33 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22.16.0
-          cache: 'npm'
+          cache: "npm"
       - name: Create .env file
         run: echo "${{secrets.ENV_PRODUCTION}}" > .env
       - run: npm install --force
       - run: npm run build
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - name: Executing remote ssh commands using password
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{secrets.HOST_PRODUCTION}}
+          username: ${{secrets.USERNAME_PRODUCTION}}
+          password: ${{secrets.PASSWORD_PRODUCTION}}
+          port: ${{secrets.PORT_PRODUCTION}}
+          script: |
+            export NVM_DIR=~/.nvm
+            source ~/.nvm/nvm.sh
+            cd ~/backend
+            git fetch --all
+            git reset --hard origin/main  
+            echo "${{secrets.ENV_PRODUCTION}}" > .env
+            npm install --force
+            npm run build
+            pm2 restart Nestjs Delivery App
