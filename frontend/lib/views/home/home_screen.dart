@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/views/restaurants/restaurant_screen.dart';
+import 'package:frontend/views/settings/address_screen.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:frontend/views/settings/menu.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:frontend/views/settings/menu.dart';
@@ -46,6 +50,21 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchUserAddress() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      String? address = prefs.getString('user_address');
+      setState(() {
+        _userAddress = address ?? 'Unknown location';
+      });
+    } catch (e) {
+      print('Error fetching address: $e');
+      setState(() {
+        _userAddress = 'Failed to load address';
+      });
+    }
   }
 
   Future<void> _checkLoginStatus() async {
@@ -162,6 +181,9 @@ class _HomeScreenState extends State<HomeScreen> {
         print('Parsed JSON data: $jsonData');
 
         if (jsonData['data'] == null || jsonData['data']['data'] == null) {
+          throw Exception(
+            'Invalid API response: "data" or "data.data" field is missing',
+          );
           throw Exception('Invalid API response: "data" or "data.data" field is missing');
         }
 
@@ -203,6 +225,9 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _isLoading = false;
       });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load restaurants: $e')));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to load restaurants: $e')),
       );
@@ -259,6 +284,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      if (index < _shops.length) {
+                        final shop = _shops[index];
+                        print(
+                          'Rendering shop: ${shop['name']} with ID: ${shop['restaurant_id']}',
+                        );
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: screenHeight * 0.02),
+                          child: _buildRestaurantCard(
+                            screenWidth,
+                            screenHeight,
+                            shop['name'] ?? 'Unknown',
+                            shop['shop_image_url'] ?? '',
+                            shop,
+                          ),
+                        );
+                      }
+                      if (_isLoading && _shops.isNotEmpty) {
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
                         if (index < _shops.length) {
@@ -336,6 +379,50 @@ class _HomeScreenState extends State<HomeScreen> {
             SizedBox(width: screenWidth * 0.02),
             GestureDetector(
               onTap: () {
+                if (!_isLoggedIn) {
+                  // Hiển thị dialog yêu cầu đăng nhập
+                  showDialog(
+                    context: context,
+                    builder:
+                        (context) => AlertDialog(
+                          title: const Text('Yêu cầu đăng nhập'),
+                          content: const Text(
+                            'Vui lòng đăng nhập để xem hoặc chỉnh sửa địa chỉ giao hàng.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text('Hủy'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                Navigator.pushNamed(context, '/login').then((
+                                  _,
+                                ) {
+                                  _checkLoginStatus();
+                                  _fetchUserProfile();
+                                  _fetchUserAddress();
+                                });
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _primaryColor,
+                              ),
+                              child: const Text(
+                                'Đăng nhập',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
+                  );
+                } else {
+                  // Logic hiện tại cho người dùng đã đăng nhập
+                  if (_userAddress == 'Unknown location' ||
+                      _userAddress == 'Failed to load address') {
+                    Navigator.pushNamed(context, '/location');
+                  } else {
+                    Navigator.push(
                 Navigator.push(
                   context,
                   PageRouteBuilder(
@@ -343,28 +430,34 @@ class _HomeScreenState extends State<HomeScreen> {
                         const AddAddressScreen(),
                     transitionsBuilder: (
                       context,
-                      animation,
-                      secondaryAnimation,
-                      child,
-                    ) {
-                      const begin = Offset(1.0, 0.0);
-                      const end = Offset.zero;
-                      const curve = Curves.easeInOut;
-
-                      var tween = Tween(
-                        begin: begin,
-                        end: end,
-                      ).chain(CurveTween(curve: curve));
-                      var offsetAnimation = animation.drive(tween);
-
-                      return SlideTransition(
-                        position: offsetAnimation,
-                        child: child,
-                      );
-                    },
-                    transitionDuration: const Duration(milliseconds: 300),
-                  ),
-                );
+                      PageRouteBuilder(
+                        pageBuilder:
+                            (context, animation, secondaryAnimation) =>
+                                const AddressesScreen(),
+                        transitionsBuilder: (
+                          context,
+                          animation,
+                          secondaryAnimation,
+                          child,
+                        ) {
+                          const begin = Offset(1.0, 0.0);
+                          const end = Offset.zero;
+                          const curve = Curves.easeInOut;
+                          var tween = Tween(
+                            begin: begin,
+                            end: end,
+                          ).chain(CurveTween(curve: curve));
+                          var offsetAnimation = animation.drive(tween);
+                          return SlideTransition(
+                            position: offsetAnimation,
+                            child: child,
+                          );
+                        },
+                        transitionDuration: const Duration(milliseconds: 300),
+                      ),
+                    );
+                  }
+                }
               },
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -379,6 +472,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   Row(
                     children: [
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: screenWidth * 0.5,
+                        ),
+                        child: Text(
+                          _userAddress,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: _fontFamily,
+                            color: _textColor,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                       Text(
                         'Halal Lab office',
                         style: TextStyle(
@@ -470,13 +577,11 @@ class _HomeScreenState extends State<HomeScreen> {
               const begin = Offset(1.0, 0.0);
               const end = Offset.zero;
               const curve = Curves.easeInOut;
-
               var tween = Tween(
                 begin: begin,
                 end: end,
               ).chain(CurveTween(curve: curve));
               var offsetAnimation = animation.drive(tween);
-
               return SlideTransition(position: offsetAnimation, child: child);
             },
             transitionDuration: const Duration(milliseconds: 300),
@@ -508,16 +613,23 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildSearchBar() {
-    return TextField(
-      decoration: InputDecoration(
-        hintText: 'Search dishes, restaurants',
-        prefixIcon: const Icon(Icons.search),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide.none,
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, '/search');
+      },
+      child: AbsorbPointer(
+        child: TextField(
+          decoration: InputDecoration(
+            hintText: 'Search dishes, restaurants',
+            prefixIcon: const Icon(Icons.search),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide.none,
+            ),
+            filled: true,
+            fillColor: Colors.grey[200],
+          ),
         ),
-        filled: true,
-        fillColor: Colors.grey[200],
       ),
     );
   }
@@ -684,6 +796,39 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return GestureDetector(
+      onTap:
+          restaurantId != null
+              ? () {
+                Navigator.push(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder:
+                        (context, animation, secondaryAnimation) =>
+                            RestaurantScreen(restaurantId: restaurantId),
+                    transitionsBuilder: (
+                      context,
+                      animation,
+                      secondaryAnimation,
+                      child,
+                    ) {
+                      const begin = Offset(1.0, 0.0);
+                      const end = Offset.zero;
+                      const curve = Curves.easeInOut;
+                      var tween = Tween(
+                        begin: begin,
+                        end: end,
+                      ).chain(CurveTween(curve: curve));
+                      var offsetAnimation = animation.drive(tween);
+                      return SlideTransition(
+                        position: offsetAnimation,
+                        child: child,
+                      );
+                    },
+                    transitionDuration: const Duration(milliseconds: 300),
+                  ),
+                );
+              }
+              : null,
       onTap: restaurantId != null
           ? () {
               Navigator.push(
@@ -761,6 +906,34 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   SizedBox(height: screenHeight * 0.01),
+                  _buildRestaurantInfoRow(
+                    screenWidth,
+                    shop['rating']?.toString() ?? '0.0',
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRestaurantInfoRow(double screenWidth, String rating) {
+    return Row(
+      children: [
+        _buildInfoItem(Icons.star, rating, screenWidth, color: Colors.orange),
+        _buildInfoItem(Icons.local_shipping, 'Free', screenWidth),
+        _buildInfoItem(
+          Icons.timer,
+          '20 min',
+          screenWidth,
+          color: Colors.orange,
+        ),
+      ],
+    );
+  }
+
                   _buildRestaurantInfoRow(screenWidth, shop['rating']?.toString() ?? '0.0'),
                 ],
               ),

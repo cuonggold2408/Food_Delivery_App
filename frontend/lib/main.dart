@@ -8,6 +8,7 @@ import 'package:frontend/views/auth/otp_verification_screen.dart';
 import 'package:frontend/views/home/home_screen.dart';
 
 import 'package:frontend/views/settings/location_permission_screen.dart';
+import 'package:frontend/views/search/search_screen.dart';
 
 
 void main() {
@@ -24,17 +25,17 @@ class MyApp extends StatelessWidget {
       title: 'Food Delivery App',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.white),
-        useMaterial3: true, // Sử dụng Material 3 để có giao diện hiện đại
+        useMaterial3: true,
       ),
-      // initialRoute: '/login',
+      initialRoute: '/location',
       routes: {
         '/login': (context) => const LoginPage(),
         '/register': (context) => const RegisterPage(),
         '/home': (context) => const HomeScreen(),
-        '/draft': (context) => DraftPage(),
+        '/draft': (context) => const DraftPage(),
+        '/search': (context) => const SearchScreen(),
+        '/location': (context) => const LocationPermissionScreen(),
       },
-
-      home: const HomeScreen(), // Đặt trang đăng nhập làm trang chính
     );
   }
 }
