@@ -35,7 +35,7 @@ class _DraftPageState extends State<DraftPage> {
       }
 
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:3000/cart'),
+        Uri.parse('http://10.0.2.2:3000/cart/all'),
         headers: headers,
       );
 

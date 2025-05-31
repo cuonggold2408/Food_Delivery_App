@@ -9,11 +9,17 @@ import CustomZodValidationPipe from 'src/shared/pipes/custom-zod-validation.pipe
 import { ZodSerializerInterceptor } from 'nestjs-zod';
 import { HttpExceptionFilter } from 'src/shared/filters/http-exception.filter';
 import { AuthModule } from 'src/routes/auth/auth.module';
-import { UserModule } from './routes/user/user.module';
+import { UserModule } from 'src/routes/user/user.module';
+import { SearchModule } from 'src/routes/search/search.module';
 import { RestaurantModule } from 'src/routes/restaurant/restaurant.module';
-import { SearchModule } from './routes/search/search.module';
-import { CartModule } from './routes/cart/cart.module';
-
+import { CartModule } from 'src/routes/cart/cart.module';
+import { ShippingModule } from 'src/routes/shipping/shipping.module';
+import { PaymentModule } from 'src/routes/payment/payment.module';
+import { OrderModule } from './routes/order/order.module';
+import { BullModule } from '@nestjs/bullmq';
+import { PaymentConsumer } from 'src/queues/payment.consumer';
+import envConfig from 'src/shared/config';
+import { WebsocketModule } from 'src/websockets/websocket.module';
 
 @Module({
   imports: [
@@ -24,9 +30,18 @@ import { CartModule } from './routes/cart/cart.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    BullModule.forRoot({
+      connection: {
+        url: envConfig.REDIS_URL,
+      },
+    }),
     RestaurantModule,
     SearchModule,
     CartModule,
+    ShippingModule,
+    PaymentModule,
+    OrderModule,
+    WebsocketModule,
   ],
   controllers: [AppController],
   providers: [
@@ -43,6 +58,7 @@ import { CartModule } from './routes/cart/cart.module';
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
     },
+    PaymentConsumer,
   ],
 })
 export class AppModule {}

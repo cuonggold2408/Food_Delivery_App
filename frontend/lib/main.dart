@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/views/cart/draft_screen.dart';
-import 'package:frontend/views/home/home_screen.dart';
 import 'package:frontend/views/settings/menu.dart';
 import 'package:frontend/views/auth/login_screen.dart';
 import 'package:frontend/views/auth/register_screen.dart';
 import 'package:frontend/views/home/product_details_screen.dart';
 import 'package:frontend/views/auth/otp_verification_screen.dart';
+import 'package:frontend/views/home/home_screen.dart';
+
 import 'package:frontend/views/settings/location_permission_screen.dart';
 import 'package:frontend/views/search/search_screen.dart';
+
 
 void main() {
   runApp(const MyApp());
