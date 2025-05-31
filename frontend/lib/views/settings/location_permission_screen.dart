@@ -14,12 +14,66 @@ class LocationPermissionScreen extends StatefulWidget {
 class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
   bool _isLoading = false;
 
-  /// Yêu cầu quyền truy cập vị trí khi ứng dụng đang sử dụng
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkLocationPermission();
+    });
+  }
+
+  Future<void> _checkLocationPermission() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always) {
+      // Nếu đã có quyền, gọi hàm lấy vị trí mà không hiển thị dialog
+      _requestLocationPermission();
+    } else {
+      // Nếu chưa có quyền, hiển thị dialog
+      _showLocationPermissionDialog();
+    }
+  }
+
+  void _showLocationPermissionDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Yêu cầu quyền vị trí'),
+            content: const Text(
+              'DFOOD cần truy cập vị trí của bạn để cung cấp dịch vụ giao hàng tốt nhất. Chỉ sử dụng khi ứng dụng đang hoạt động.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _navigateToHomeScreen(null);
+                },
+                child: const Text('Từ chối'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _requestLocationPermission();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepOrange,
+                ),
+                child: const Text(
+                  'Đồng ý',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+    );
+  }
+
   Future<void> _requestLocationPermission() async {
     setState(() => _isLoading = true);
 
     try {
-      // Kiểm tra dịch vụ vị trí
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         if (mounted) {
@@ -28,7 +82,10 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
               content: const Text('Dịch vụ vị trí đang tắt.'),
               action: SnackBarAction(
                 label: 'Bật',
-                onPressed: () => Geolocator.openLocationSettings(),
+                onPressed: () async {
+                  await Geolocator.openLocationSettings();
+                  _requestLocationPermission();
+                },
               ),
             ),
           );
@@ -37,28 +94,9 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
         return;
       }
 
-      // Kiểm tra quyền vị trí
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        // Yêu cầu quyền chỉ khi ứng dụng đang sử dụng
         permission = await Geolocator.requestPermission();
-        if (permission != LocationPermission.whileInUse) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text(
-                  'Cần quyền truy cập vị trí khi sử dụng ứng dụng.',
-                ),
-                action: SnackBarAction(
-                  label: 'Thử lại',
-                  onPressed: _requestLocationPermission,
-                ),
-              ),
-            );
-          }
-          _navigateToHomeScreen(null);
-          return;
-        }
       }
 
       if (permission == LocationPermission.deniedForever) {
@@ -66,7 +104,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text(
-                'Quyền truy cập vị trí bị từ chối vĩnh viễn. Vui lòng cấp quyền trong cài đặt.',
+                'Quyền truy cập vị trí bị từ chối vĩnh viễn.',
               ),
               action: SnackBarAction(
                 label: 'Mở cài đặt',
@@ -79,13 +117,15 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
         return;
       }
 
-      // Kiểm tra nếu quyền không phải là whileInUse
-      if (permission != LocationPermission.whileInUse) {
+      if (permission != LocationPermission.whileInUse &&
+          permission != LocationPermission.always) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Ứng dụng chỉ cần quyền truy cập vị trí khi đang sử dụng.',
+            SnackBar(
+              content: const Text('Cần quyền truy cập vị trí.'),
+              action: SnackBarAction(
+                label: 'Thử lại',
+                onPressed: _requestLocationPermission,
               ),
             ),
           );
@@ -94,29 +134,24 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
         return;
       }
 
-      // Lấy vị trí hiện tại
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      // Chuyển đổi tọa độ thành địa chỉ
       List<Placemark> placemarks = await placemarkFromCoordinates(
         position.latitude,
         position.longitude,
       );
 
-      String address = 'Vị trí không xác định';
+      String address = 'Unknown location';
       if (placemarks.isNotEmpty) {
         Placemark placemark = placemarks.first;
         address = [
           placemark.street,
-          placemark.subLocality,
           placemark.locality,
-          placemark.administrativeArea,
         ].where((e) => e != null && e.isNotEmpty).join(', ');
       }
 
-      // Lưu địa chỉ và tọa độ vào SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_address', address);
       await prefs.setDouble('user_latitude', position.latitude);
@@ -137,7 +172,6 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
     }
   }
 
-  /// Điều hướng đến màn hình chính
   void _navigateToHomeScreen(String? address) {
     Navigator.pushReplacementNamed(context, '/home');
   }
@@ -154,7 +188,6 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Hình ảnh bản đồ với dấu định vị
                   Container(
                     width: 200,
                     height: 200,
@@ -176,7 +209,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
                   ),
                   const SizedBox(height: 32),
                   const Text(
-                    'ACCESS LOCATION',
+                    'TRUY CẬP VỊ TRÍ',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -186,48 +219,9 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'DFOOD will access your location only while using the app',
+                    'DFOOD sẽ truy cập vị trí của bạn chỉ khi sử dụng ứng dụng',
                     style: TextStyle(fontSize: 16, color: Colors.grey),
                     textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 32),
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _requestLocationPermission,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepOrange,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 30,
-                        vertical: 15,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                    child:
-                        _isLoading
-                            ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 3,
-                              ),
-                            )
-                            : const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'ACCESS LOCATION',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(width: 8),
-                                Icon(Icons.location_on, color: Colors.white),
-                              ],
-                            ),
                   ),
                 ],
               ),

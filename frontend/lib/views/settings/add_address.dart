@@ -5,18 +5,21 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_debouncer/flutter_debouncer.dart';
 import 'package:frontend/services/api_service.dart';
 import 'package:frontend/views/settings/address_screen.dart';
 
+// Định nghĩa API Key cho Goong
+const goongApiKey = 'HnbVVYEre497owDt61e9wK2sFsvMLDWzXVx8QFA0';
+
 // Hàm gọi API để lưu địa chỉ (thêm mới hoặc cập nhật)
 Future<void> saveAddress({
-  int? addressId, // Tham số để xác định chế độ chỉnh sửa
+  int? addressId,
   required String address,
   required String street,
   required String apartment,
   required String recipientName,
   required String phoneNumber,
-  // required String postalCode,
   required String latitude,
   required String longitude,
   required String token,
@@ -38,7 +41,6 @@ Future<void> saveAddress({
     'apartment': apartment,
     'recipient_name': recipientName,
     'phone_number': phoneNumber,
-    // 'postal_code': postalCode,
     'latitude': latitude,
     'longitude': longitude,
     'label': label,
@@ -95,8 +97,45 @@ const kMapHeightRatio = 1 / 3;
 const kSpacing = 16.0;
 const kDefaultLatLng = LatLng(21.0285, 105.8542);
 
+// Định nghĩa lớp GoongPlace để lưu trữ thông tin gợi ý địa chỉ
+class GoongPlace {
+  final String description;
+  final String placeId;
+
+  GoongPlace({required this.description, required this.placeId});
+
+  factory GoongPlace.fromJson(Map<String, dynamic> json) {
+    return GoongPlace(
+      description: json['description'] ?? '',
+      placeId: json['place_id'] ?? '',
+    );
+  }
+}
+
+// Hàm lấy chi tiết địa chỉ từ Goong Place Detail API
+Future<LatLng?> getPlaceDetails(String placeId) async {
+  final url = Uri.parse(
+    'https://rsapi.goong.io/Place/Detail?place_id=$placeId&api_key=$goongApiKey',
+  );
+  try {
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final result = data['result'];
+      final geometry = result['geometry']['location'];
+      return LatLng(geometry['lat'], geometry['lng']);
+    } else {
+      print('Goong Place Detail API error: ${response.statusCode}');
+      return null;
+    }
+  } catch (e) {
+    print('Error fetching Goong place details: $e');
+    return null;
+  }
+}
+
 class AddAddressScreen extends StatefulWidget {
-  final Address? address; // Tham số tùy chọn để nhận địa chỉ khi chỉnh sửa
+  final Address? address;
   const AddAddressScreen({super.key, this.address});
 
   @override
@@ -112,12 +151,10 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
       TextEditingController();
   final TextEditingController _phoneNumberController = TextEditingController();
   final GlobalKey<_MapSectionState> _mapSectionKey = GlobalKey();
-  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    // Nếu có dữ liệu địa chỉ (chế độ chỉnh sửa), điền vào các trường
     if (widget.address != null) {
       _addressController.text = widget.address!.addressName;
       _streetController.text = widget.address!.streetAddress;
@@ -154,14 +191,6 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
             Navigator.pop(context);
           },
         ),
-        title: const Text(
-          'Add Address',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
       ),
       body: SafeArea(
         child: Column(
@@ -169,7 +198,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
             MapSection(
               key: _mapSectionKey,
               height: mapHeight,
-              isEditing: widget.address != null, // Xác định chế độ chỉnh sửa
+              isEditing: widget.address != null,
               onLocationSelected: (LatLng position, String address) {
                 setState(() {
                   _addressController.text = address;
@@ -190,39 +219,26 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: kSpacing),
-                    AddressField(controller: _addressController),
+                    AddressField(
+                      controller: _addressController,
+                      onPlaceSelected: (GoongPlace place) async {
+                        final latLng = await getPlaceDetails(place.placeId);
+                        if (latLng != null &&
+                            _mapSectionKey.currentState != null) {
+                          _mapSectionKey.currentState!._selectedPosition =
+                              latLng;
+                          await _mapSectionKey.currentState!
+                              ._updateMarkerAndAddress();
+                          _mapSectionKey.currentState!._mapController
+                              ?.animateCamera(
+                                CameraUpdate.newLatLngZoom(latLng, 15.0),
+                              );
+                        }
+                      },
+                    ),
                     const SizedBox(height: kSpacing),
                     StreetAndPostCodeSection(
                       streetController: _streetController,
-                      isLoading: _isLoading,
-                      onFindPressed: () async {
-                        if (_addressController.text.isNotEmpty) {
-                          if (_mapSectionKey.currentState != null) {
-                            setState(() {
-                              _isLoading = true;
-                            });
-                            await _mapSectionKey.currentState!
-                                ._getCoordinatesFromAddress(
-                                  _addressController.text,
-                                );
-                            setState(() {
-                              _isLoading = false;
-                            });
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Lỗi: Không thể truy cập bản đồ'),
-                              ),
-                            );
-                          }
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Vui lòng nhập địa chỉ'),
-                            ),
-                          );
-                        }
-                      },
                     ),
                     const SizedBox(height: kSpacing),
                     ApartmentField(controller: _apartmentController),
@@ -246,8 +262,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                       phoneNumberController: _phoneNumberController,
                       label: _selectedLabel,
                       mapSectionKey: _mapSectionKey,
-                      address:
-                          widget.address, // Truyền address để lấy addressId
+                      address: widget.address,
                     ),
                   ],
                 ),
@@ -283,7 +298,7 @@ class _MapSectionState extends State<MapSection> {
   LatLng _selectedPosition = kDefaultLatLng;
   Set<Marker> _markers = {};
   Map<LatLng, String> _addressCache = {};
-  double _currentZoom = 15.0; // Lưu mức độ zoom hiện tại
+  double _currentZoom = 15.0;
 
   @override
   void initState() {
@@ -359,38 +374,6 @@ class _MapSectionState extends State<MapSection> {
     }
   }
 
-  Future<void> _getCoordinatesFromAddress(String address) async {
-    try {
-      List<Location> locations = await locationFromAddress(address);
-      if (locations.isNotEmpty) {
-        Location location = locations.first;
-        LatLng newPosition = LatLng(location.latitude, location.longitude);
-        if (mounted) {
-          setState(() {
-            _selectedPosition = newPosition;
-            _updateMarkerAndAddress();
-            _mapController?.animateCamera(
-              CameraUpdate.newLatLngZoom(newPosition, _currentZoom),
-            );
-          });
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Không tìm thấy địa chỉ')),
-          );
-        }
-      }
-    } catch (e) {
-      print('Error forward geocoding: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Lỗi khi tìm địa chỉ: $e')));
-      }
-    }
-  }
-
   Future<void> _updateMarkerAndAddress() async {
     if (_addressCache.containsKey(_selectedPosition)) {
       widget.onLocationSelected(
@@ -422,7 +405,6 @@ class _MapSectionState extends State<MapSection> {
           placemark.street,
           placemark.locality,
           placemark.administrativeArea,
-          // placemark.postalCode,
           placemark.country,
         ].where((element) => element != null && element.isNotEmpty).join(', ');
 
@@ -446,21 +428,19 @@ class _MapSectionState extends State<MapSection> {
     }
   }
 
-  // Hàm phóng to bản đồ
   void _zoomIn() {
     if (_mapController != null) {
       setState(() {
-        _currentZoom += 1; // Tăng mức độ zoom
+        _currentZoom += 1;
         _mapController!.animateCamera(CameraUpdate.zoomIn());
       });
     }
   }
 
-  // Hàm thu nhỏ bản đồ
   void _zoomOut() {
     if (_mapController != null) {
       setState(() {
-        _currentZoom -= 1; // Giảm mức độ zoom
+        _currentZoom -= 1;
         _mapController!.animateCamera(CameraUpdate.zoomOut());
       });
     }
@@ -480,7 +460,7 @@ class _MapSectionState extends State<MapSection> {
             markers: _markers,
             myLocationEnabled: true,
             myLocationButtonEnabled: true,
-            zoomControlsEnabled: false, // Tắt các nút zoom mặc định
+            zoomControlsEnabled: false,
             onMapCreated: (GoogleMapController controller) {
               _mapController = controller;
               if (widget.isEditing) {
@@ -496,10 +476,9 @@ class _MapSectionState extends State<MapSection> {
               });
             },
           ),
-          // Thêm các nút zoom tùy chỉnh
           Positioned(
             right: 10,
-            bottom: 25, // Đặt vị trí các nút zoom
+            bottom: 25,
             child: Column(
               children: [
                 FloatingActionButton(
@@ -530,10 +509,75 @@ class _MapSectionState extends State<MapSection> {
   }
 }
 
-class AddressField extends StatelessWidget {
+class AddressField extends StatefulWidget {
   final TextEditingController controller;
+  final Function(GoongPlace) onPlaceSelected;
 
-  const AddressField({super.key, required this.controller});
+  const AddressField({
+    super.key,
+    required this.controller,
+    required this.onPlaceSelected,
+  });
+
+  @override
+  State<AddressField> createState() => _AddressFieldState();
+}
+
+class _AddressFieldState extends State<AddressField> {
+  bool _isSubmitted = false;
+  String _lastSubmittedText = ''; // Lưu giá trị text khi submit
+  final _debouncer = Debouncer();
+
+  Future<List<GoongPlace>> _fetchGoongSuggestions(String input) async {
+    if (input.isEmpty || _isSubmitted) return [];
+
+    final completer = Completer<List<GoongPlace>>();
+
+    _debouncer.debounce(
+      duration: const Duration(milliseconds: 500),
+      onDebounce: () async {
+        final url = Uri.parse(
+          'https://rsapi.goong.io/Place/AutoComplete?input=$input&location=21.0285,105.8542&api_key=$goongApiKey',
+        );
+        try {
+          final response = await http.get(url);
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body);
+            final predictions = data['predictions'] as List<dynamic>;
+            completer.complete(
+              predictions
+                  .map((prediction) => GoongPlace.fromJson(prediction))
+                  .toList(),
+            );
+          } else {
+            print('Goong API error: ${response.statusCode}');
+            completer.complete([]);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Lỗi API: ${response.statusCode}')),
+              );
+            }
+          }
+        } catch (e) {
+          print('Error fetching Goong suggestions: $e');
+          completer.complete([]);
+          if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('Lỗi kết nối: $e')));
+          }
+        }
+      },
+    );
+
+    return completer.future;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _lastSubmittedText = widget.controller.text;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -542,81 +586,139 @@ class AddressField extends StatelessWidget {
       children: [
         const Text('ADDRESS', style: kLabelTextStyle),
         const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          decoration: kTextFieldDecoration.copyWith(
-            prefixIcon: const Icon(Icons.location_on, color: Colors.grey),
-            hintText: 'Enter your address',
-            hintStyle: const TextStyle(color: Colors.grey),
-          ),
+        Autocomplete<GoongPlace>(
+          optionsBuilder: (TextEditingValue textEditingValue) async {
+            return await _fetchGoongSuggestions(textEditingValue.text);
+          },
+          displayStringForOption: (GoongPlace option) => option.description,
+          fieldViewBuilder: (
+            BuildContext context,
+            TextEditingController textEditingController,
+            FocusNode focusNode,
+            VoidCallback onFieldSubmitted,
+          ) {
+            textEditingController.text = widget.controller.text;
+            textEditingController.addListener(() {
+              widget.controller.text = textEditingController.text;
+              if (_isSubmitted &&
+                  textEditingController.text != _lastSubmittedText) {
+                setState(() {
+                  _isSubmitted = false;
+                });
+              }
+            });
+            return TextField(
+              controller: textEditingController,
+              focusNode: focusNode,
+              decoration: kTextFieldDecoration.copyWith(
+                prefixIcon: const Icon(Icons.location_on, color: Colors.grey),
+                hintText: 'Enter your address',
+                hintStyle: const TextStyle(color: Colors.grey),
+              ),
+              onSubmitted: (value) {
+                setState(() {
+                  _isSubmitted = true;
+                  _lastSubmittedText = value;
+                });
+                onFieldSubmitted();
+              },
+            );
+          },
+          optionsViewBuilder: (
+            BuildContext context,
+            AutocompleteOnSelected<GoongPlace> onSelected,
+            Iterable<GoongPlace> options,
+          ) {
+            return Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 4.0,
+                borderRadius: const BorderRadius.all(Radius.circular(8)),
+                child: Container(
+                  width:
+                      MediaQuery.of(context).size.width -
+                      32, // Match TextField width
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(8.0),
+                    shrinkWrap: true,
+                    itemCount: options.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      final GoongPlace option = options.elementAt(index);
+                      return GestureDetector(
+                        onTap: () {
+                          onSelected(option);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.grey.withOpacity(0.2),
+                              width: 1,
+                            ),
+                          ),
+                          margin: const EdgeInsets.only(bottom: 8.0),
+                          child: Text(
+                            option.description,
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
+          onSelected: (GoongPlace place) {
+            widget.controller.text = place.description;
+            setState(() {
+              _isSubmitted = true;
+              _lastSubmittedText = place.description;
+            });
+            widget.onPlaceSelected(place);
+          },
         ),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    _debouncer.cancel();
+    super.dispose();
   }
 }
 
 class StreetAndPostCodeSection extends StatelessWidget {
   final TextEditingController streetController;
-  final bool isLoading;
-  final VoidCallback onFindPressed;
 
-  const StreetAndPostCodeSection({
-    super.key,
-    required this.streetController,
-    required this.isLoading,
-    required this.onFindPressed,
-  });
+  const StreetAndPostCodeSection({super.key, required this.streetController});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('STREET', style: kLabelTextStyle),
-              const SizedBox(height: 8),
-              TextField(
-                controller: streetController,
-                decoration: kTextFieldDecoration.copyWith(
-                  hintText: 'Enter street',
-                  hintStyle: const TextStyle(color: Colors.grey),
-                ),
-              ),
-            ],
+        const Text('STREET', style: kLabelTextStyle),
+        const SizedBox(height: 8),
+        TextField(
+          controller: streetController,
+          decoration: kTextFieldDecoration.copyWith(
+            hintText: 'Nhập tên đường',
+            hintStyle: const TextStyle(color: Colors.grey),
           ),
-        ),
-        const SizedBox(width: kSpacing),
-        ElevatedButton(
-          onPressed: isLoading ? null : onFindPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: kOrangeColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            minimumSize: const Size(80, 48),
-          ),
-          child:
-              isLoading
-                  ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                  : const Text(
-                    'Find',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
         ),
       ],
     );
@@ -638,7 +740,7 @@ class ApartmentField extends StatelessWidget {
         TextField(
           controller: controller,
           decoration: kTextFieldDecoration.copyWith(
-            hintText: 'Enter apartment number',
+            hintText: 'Nhập số căn hộ',
             hintStyle: const TextStyle(color: Colors.grey),
           ),
         ),
@@ -662,7 +764,7 @@ class RecipientNameField extends StatelessWidget {
         TextField(
           controller: controller,
           decoration: kTextFieldDecoration.copyWith(
-            hintText: 'Enter recipient name',
+            hintText: 'Nhập tên người nhận',
             hintStyle: const TextStyle(color: Colors.grey),
           ),
         ),
@@ -687,7 +789,7 @@ class PhoneNumberField extends StatelessWidget {
           controller: controller,
           keyboardType: TextInputType.phone,
           decoration: kTextFieldDecoration.copyWith(
-            hintText: 'Enter phone number',
+            hintText: 'Nhập số điện thoại',
             hintStyle: const TextStyle(color: Colors.grey),
           ),
         ),
@@ -780,7 +882,7 @@ class SaveButton extends StatefulWidget {
   final TextEditingController phoneNumberController;
   final String label;
   final GlobalKey<_MapSectionState> mapSectionKey;
-  final Address? address; // Thêm để lấy addressId nếu chỉnh sửa
+  final Address? address;
 
   const SaveButton({
     super.key,
@@ -865,19 +967,15 @@ class _SaveButtonState extends State<SaveButton> {
                     final latitude = latLng.latitude.toString();
                     final longitude = latLng.longitude.toString();
 
-                    // const postalCode = '123'; // Giá trị mặc định hoặc lấy từ UI
-
-                    // Lấy addressId từ widget.address (nếu có)
                     final addressId = widget.address?.id;
 
                     await saveAddress(
-                      addressId: addressId, // Truyền addressId nếu chỉnh sửa
+                      addressId: addressId,
                       address: address,
                       street: street,
                       apartment: apartment,
                       recipientName: recipientName,
                       phoneNumber: phoneNumber,
-                      // postalCode: postalCode,
                       latitude: latitude,
                       longitude: longitude,
                       token: token,
@@ -919,7 +1017,7 @@ class _SaveButtonState extends State<SaveButton> {
                   ),
                 )
                 : const Text(
-                  'SAVE LOCATION',
+                  'SAVE ADDRESS',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16,

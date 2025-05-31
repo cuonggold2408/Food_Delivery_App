@@ -318,15 +318,27 @@ class _MenuState extends State<Menu> {
               // Nhóm 4: Log Out
               _buildGroupedMenuItems(
                 items: [
+                  // Trong _buildGroupedMenuItems, mục Log Out
                   _MenuItemData(
                     icon: Icons.logout,
                     title: 'Log Out',
                     iconColor: Colors.red,
                     textColor: Colors.red,
                     onTap: () async {
+                      // Xóa thông tin vị trí
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.remove('user_address');
+                      await prefs.remove('user_latitude');
+                      await prefs.remove('user_longitude');
+
+                      // Gọi API đăng xuất
                       await ApiService.logout();
+
+                      // Hiển thị thông báo đăng xuất thành công
                       showSuccessSnackbar('Đăng xuất thành công!');
-                      Navigator.pushReplacementNamed(context, '/home');
+
+                      // Chuyển hướng đến màn hình yêu cầu vị trí
+                      Navigator.pushReplacementNamed(context, '/location');
                     },
                   ),
                 ],
