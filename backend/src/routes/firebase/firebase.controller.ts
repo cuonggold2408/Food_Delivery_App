@@ -10,6 +10,12 @@ import {
   Req,
   Request,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiParam,
+} from '@nestjs/swagger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Order, OrderStatus } from 'src/database/entities/order/order.entity';
 import { RegisterDeviceTokenDto } from 'src/routes/firebase/firebase.dto';
@@ -23,6 +29,7 @@ export class UpdateOrderStatusDto {
 }
 
 @Controller('firebase/notifications')
+@ApiBearerAuth()
 export class FirebaseController {
   constructor(
     private readonly firebaseService: FirebaseService,
@@ -36,6 +43,9 @@ export class FirebaseController {
    * Cập nhật trạng thái đơn hàng và gửi thông báo
    */
   @Put(':orderId/status')
+  @ApiOperation({ summary: 'Cập nhật trạng thái đơn hàng và gửi thông báo' })
+  @ApiParam({ name: 'orderId', type: Number, description: 'ID của đơn hàng' })
+  @ApiBody({ type: UpdateOrderStatusDto })
   async updateOrderStatus(
     @Param('orderId', ParseIntPipe) orderId: number,
     @Body() updateDto: UpdateOrderStatusDto,
@@ -81,6 +91,8 @@ export class FirebaseController {
   }
 
   // Đăng ký device token cho user hiện tại
+  @ApiOperation({ summary: 'Đăng ký device token cho user hiện tại' })
+  @ApiBody({ type: RegisterDeviceTokenDto })
   @Post('register-device')
   async registerDevice(
     @Body() body: RegisterDeviceTokenDto,
@@ -91,6 +103,7 @@ export class FirebaseController {
   }
 
   @Delete('unregister-device')
+  @ApiOperation({ summary: 'Hủy đăng ký device token cho user hiện tại' })
   async unregisterDevice(
     @Body() body: { deviceToken: string },
     @Request() req: any,
@@ -103,6 +116,7 @@ export class FirebaseController {
   }
 
   @Get('test')
+  @ApiOperation({ summary: 'Gửi thông báo test cho user hiện tại' })
   async sendTestNotification(@Req() req: any) {
     const { user_id } = req.user;
     await this.firebaseRepository.sendToUser(user_id, {
