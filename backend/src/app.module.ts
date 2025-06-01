@@ -20,6 +20,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { PaymentConsumer } from 'src/queues/payment.consumer';
 import envConfig from 'src/shared/config';
 import { WebsocketModule } from 'src/websockets/websocket.module';
+import { FirebaseModule } from './routes/firebase/firebase.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { WebsocketModule } from 'src/websockets/websocket.module';
     PaymentModule,
     OrderModule,
     WebsocketModule,
+    FirebaseModule,
   ],
   controllers: [AppController],
   providers: [

@@ -102,8 +102,6 @@ export class CartRepository {
         ],
       });
 
-      console.log('existingCartItem: ', existingCartItem);
-
       if (existingCartItem.length > 0) {
         // Duyệt qua từng cart item để kiểm tra customizations
         for (const cartItem of existingCartItem) {
@@ -115,12 +113,6 @@ export class CartRepository {
               },
               relations: ['option'],
             });
-
-          // console.log('Cart Item Customizations:', cartItemCustomizations);
-          // console.log(
-          //   'Menu Item Customization Categories:',
-          //   cartItem.menuItem.customizationMappings,
-          // );
 
           // So sánh customizations
           const isSameCustomizations = this.compareCustomizations(
@@ -247,7 +239,6 @@ export class CartRepository {
         'restaurant.promotions',
       ],
     });
-    console.log('cart: ', cart);
 
     if (!cart) {
       return null;
