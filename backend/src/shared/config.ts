@@ -24,6 +24,7 @@ const configSchema = z.object({
   REDIS_URL: z.string(),
   ACC_BANK: z.string(),
   SHORT_BANK: z.string(),
+  FIREBASE_SERVICE_ACCOUNT_KEY: z.string(),
 });
 
 const configServer = configSchema.safeParse(process.env);

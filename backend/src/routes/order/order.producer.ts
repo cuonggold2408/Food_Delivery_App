@@ -9,11 +9,7 @@ import { generateCancelPaymentJobId } from 'src/shared/helpers';
 
 @Injectable()
 export class OrderProducer {
-  constructor(@InjectQueue(PAYMENT_QUEUE_NAME) private paymentQueue: Queue) {
-    // this.paymentQueue.getJobs().then((jobs) => {
-    //   console.log('Jobs in queue: ', jobs);
-    // });
-  }
+  constructor(@InjectQueue(PAYMENT_QUEUE_NAME) private paymentQueue: Queue) {}
 
   async addCancelPaymentJob(paymentId: number) {
     return this.paymentQueue.add(

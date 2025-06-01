@@ -32,8 +32,8 @@ export class PaymentController {
   })
   @Auth(['PaymentAPIKey'])
   async receiver(@Body() body: WebhookPaymentBodyDTO) {
-    console.log('🔔 Webhook received at:', new Date().toISOString());
-    console.log('🔔 Body:', JSON.stringify(body, null, 2));
+    // console.log('🔔 Webhook received at:', new Date().toISOString());
+    // console.log('🔔 Body:', JSON.stringify(body, null, 2));
     return this.paymentService.receiver(body);
   }
 }

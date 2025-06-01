@@ -89,8 +89,6 @@ export class AuthRepository {
       where: uniqueValue,
     });
 
-    console.log('verificationCode: ', verificationCode);
-
     if (!verificationCode) {
       return null;
     }

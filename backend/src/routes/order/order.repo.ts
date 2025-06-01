@@ -43,8 +43,6 @@ export class OrderRepository {
       },
     });
 
-    console.log('orderExist: ', orderExist);
-
     if (
       orderExist.length > 0 &&
       orderExist[orderExist.length - 1]?.order_status ===
