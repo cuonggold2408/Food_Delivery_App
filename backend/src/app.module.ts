@@ -21,6 +21,8 @@ import { PaymentConsumer } from 'src/queues/payment.consumer';
 import envConfig from 'src/shared/config';
 import { WebsocketModule } from 'src/websockets/websocket.module';
 import { FirebaseModule } from './routes/firebase/firebase.module';
+import { MediaModule } from './routes/media/media.module';
+import { ReviewModule } from './routes/review/review.module';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { FirebaseModule } from './routes/firebase/firebase.module';
     OrderModule,
     WebsocketModule,
     FirebaseModule,
+    MediaModule,
+    ReviewModule,
   ],
   controllers: [AppController],
   providers: [

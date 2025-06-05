@@ -24,6 +24,7 @@ import { SharedPaymentRepository } from 'src/shared/repositories/shared-payment.
 import { Payment } from 'src/database/entities/payment/payment.entity';
 import { SharedWebSocketRepository } from 'src/shared/repositories/shared-websocket.repo';
 import { WebSocket } from 'src/database/entities/websocket/websocket.entity';
+import { S3Service } from 'src/shared/services/s3.service';
 
 const sharedServices = [
   HashingService,
@@ -33,6 +34,7 @@ const sharedServices = [
   SeedService,
   SharedPaymentRepository,
   SharedWebSocketRepository,
+  S3Service,
 ];
 
 @Global()
