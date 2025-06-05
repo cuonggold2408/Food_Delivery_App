@@ -76,6 +76,7 @@ export class OrderRepository {
       total_pay: item.total_pay,
       message: item.message,
       dish: {
+        dish_id: item.menuItem.item_id,
         name: item.menuItem.name,
         image: item.menuItem.image_url,
         price: item.menuItem.price,
