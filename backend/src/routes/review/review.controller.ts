@@ -8,6 +8,7 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import {
   CreateReviewBodyDTO,
   UpdateReviewBodyDTO,
@@ -20,6 +21,7 @@ export class ReviewController {
   constructor(private readonly reviewService: ReviewService) {}
 
   @Get('/products/:itemId')
+  @ApiOperation({ summary: 'Lấy danh sách đánh giá của sản phẩm' })
   @IsPublic()
   async list(
     @Query('page') page: number = 1,
@@ -30,12 +32,16 @@ export class ReviewController {
   }
 
   @Post()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Tạo đánh giá cho sản phẩm' })
   async create(@Body() body: CreateReviewBodyDTO, @Req() req: any) {
     const userId = req.user.user_id;
     return this.reviewService.create(userId, body);
   }
 
   @Put(':reviewId')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cập nhật đánh giá cho sản phẩm' })
   async update(
     @Body() body: UpdateReviewBodyDTO,
     @Req() req: any,
