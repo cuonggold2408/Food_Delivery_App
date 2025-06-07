@@ -12,3 +12,18 @@ export const AddRestaurantBodySchema = z.object({
 });
 
 export type AddRestaurantBodyType = z.infer<typeof AddRestaurantBodySchema>;
+
+export const AddFoodBodySchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  price: z.string(),
+  image_url: z.string(),
+});
+
+export type AddFoodBodyType = z.infer<typeof AddFoodBodySchema>;
+
+export const AddFoodCategoryBodySchema = z.object({
+  name: z.string(),
+});
+
+export type AddFoodCategoryBodyType = z.infer<typeof AddFoodCategoryBodySchema>;

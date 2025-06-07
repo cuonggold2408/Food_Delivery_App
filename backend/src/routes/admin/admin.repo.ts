@@ -1,7 +1,15 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { MenuItem } from 'src/database/entities/menu-item.entity';
+import { CustomizationCategory } from 'src/database/entities/restaurant/category/customization-category.entity';
+import { ItemCustomizationCategory } from 'src/database/entities/restaurant/category/item-customization-category.entity';
+import { MenuCategory } from 'src/database/entities/restaurant/category/menu-categories.entity';
 import { Restaurant } from 'src/database/entities/restaurant/restaurant.entity';
-import { AddRestaurantBodyType } from 'src/routes/admin/admin.model';
+import {
+  AddFoodBodyType,
+  AddFoodCategoryBodyType,
+  AddRestaurantBodyType,
+} from 'src/routes/admin/admin.model';
 import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -10,8 +18,23 @@ export class AdminRepository {
   constructor(
     @InjectRepository(Restaurant)
     private readonly restaurantRepository: Repository<Restaurant>,
+
+    @InjectRepository(MenuItem)
+    private readonly menuItemRepository: Repository<MenuItem>,
+
+    @InjectRepository(MenuCategory)
+    private readonly menuCategoryRepository: Repository<MenuCategory>,
+
+    @InjectRepository(ItemCustomizationCategory)
+    private readonly itemCustomizationCategoryRepository: Repository<ItemCustomizationCategory>,
+
+    @InjectRepository(CustomizationCategory)
+    private readonly customizationCategoryRepository: Repository<CustomizationCategory>,
   ) {}
 
+  /**
+   * Nhà hàng
+   */
   async addRestaurant(
     body: Omit<AddRestaurantBodyType, 'restaurant_id' | 'rating' | 'is_active'>,
   ) {
@@ -140,6 +163,7 @@ export class AdminRepository {
       where: {
         restaurant_id,
       },
+      relations: ['menuItems'],
     });
 
     if (!restaurant) {
@@ -147,5 +171,126 @@ export class AdminRepository {
     }
 
     return restaurant;
+  }
+
+  /**
+   * Món ăn
+   */
+  async addFood(restaurant_id: string, body: AddFoodBodyType) {
+    const { name, description, price, image_url } = body;
+
+    const generate_item_id = uuidv4().replace(/-/g, '').slice(0, 12);
+
+    const item_id = `IT${generate_item_id}`;
+
+    const newFood = this.menuItemRepository.create({
+      item_id,
+      name,
+      description,
+      price,
+      image_url,
+      restaurant: {
+        restaurant_id,
+      },
+    });
+
+    return this.menuItemRepository.save(newFood);
+  }
+
+  async addFoodCategory(
+    restaurant_id: string,
+    item_id: string,
+    body: AddFoodCategoryBodyType,
+  ) {
+    const { name } = body;
+
+    const generate_category_id = uuidv4().replace(/-/g, '').slice(0, 12);
+
+    const category_id = `CAT${generate_category_id}`;
+
+    // Tạo CustomizationCategory
+    const newCustomizationCategory =
+      this.customizationCategoryRepository.create({
+        categoryId: category_id,
+        name,
+        restaurantId: {
+          restaurant_id,
+        },
+      });
+    await this.customizationCategoryRepository.save(newCustomizationCategory);
+
+    // Tạo mapping giữa item và customization category
+    const newItemCustomization =
+      this.itemCustomizationCategoryRepository.create({
+        itemId: item_id,
+        categoryId: category_id,
+      });
+    await this.itemCustomizationCategoryRepository.save(newItemCustomization);
+
+    const newMenuCategory = this.menuCategoryRepository.create({
+      categoryId: category_id,
+      name,
+      restaurant: {
+        restaurant_id,
+      },
+    });
+    await this.menuCategoryRepository.save(newMenuCategory);
+
+    await this.menuItemRepository.update(
+      { item_id, restaurant: { restaurant_id } },
+      {
+        menuCategory: {
+          categoryId: category_id,
+        },
+      },
+    );
+
+    return {
+      message: 'Thêm danh mục cho món ăn thành công',
+    };
+  }
+
+  async updateFood(
+    restaurant_id: string,
+    item_id: string,
+    body: AddFoodBodyType,
+  ) {
+    const { name, description, price, image_url } = body;
+
+    await this.menuItemRepository.update(
+      { item_id, restaurant: { restaurant_id } },
+      {
+        name,
+        description,
+        price,
+        image_url,
+      },
+    );
+
+    return {
+      message: 'Sửa món ăn thành công',
+    };
+  }
+
+  async deleteFood(restaurant_id: string, item_id: string) {
+    await this.menuItemRepository.update(
+      { item_id, restaurant: { restaurant_id } },
+      { is_available: false },
+    );
+
+    return {
+      message: 'Cập nhật tình trạng món ăn thành công',
+    };
+  }
+
+  async activeFood(restaurant_id: string, item_id: string) {
+    await this.menuItemRepository.update(
+      { item_id, restaurant: { restaurant_id } },
+      { is_available: true },
+    );
+
+    return {
+      message: 'Active món ăn thành công',
+    };
   }
 }

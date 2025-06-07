@@ -1,11 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { AddRestaurantBodyType } from 'src/routes/admin/admin.model';
+import {
+  AddFoodBodyType,
+  AddFoodCategoryBodyType,
+  AddRestaurantBodyType,
+} from 'src/routes/admin/admin.model';
 import { AdminRepository } from 'src/routes/admin/admin.repo';
 
 @Injectable()
 export class AdminService {
   constructor(private readonly adminRepository: AdminRepository) {}
 
+  /**
+   * Nhà hàng
+   */
   async addRestaurant(
     body: Omit<AddRestaurantBodyType, 'restaurant_id' | 'rating' | 'is_active'>,
   ) {
@@ -33,5 +40,36 @@ export class AdminService {
 
   async getRestaurant(restaurant_id: string) {
     return this.adminRepository.getRestaurant(restaurant_id);
+  }
+
+  /**
+   * Món ăn
+   */
+  async addFood(restaurant_id: string, body: AddFoodBodyType) {
+    return this.adminRepository.addFood(restaurant_id, body);
+  }
+
+  async addFoodCategory(
+    restaurant_id: string,
+    item_id: string,
+    body: AddFoodCategoryBodyType,
+  ) {
+    return this.adminRepository.addFoodCategory(restaurant_id, item_id, body);
+  }
+
+  async updateFood(
+    restaurant_id: string,
+    item_id: string,
+    body: AddFoodBodyType,
+  ) {
+    return this.adminRepository.updateFood(restaurant_id, item_id, body);
+  }
+
+  async deleteFood(restaurant_id: string, item_id: string) {
+    return this.adminRepository.deleteFood(restaurant_id, item_id);
+  }
+
+  async activeFood(restaurant_id: string, item_id: string) {
+    return this.adminRepository.activeFood(restaurant_id, item_id);
   }
 }

@@ -9,7 +9,11 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation } from '@nestjs/swagger';
-import { AddRestaurantBodyDTO } from 'src/routes/admin/admin.dto';
+import {
+  AddFoodBodyDTO,
+  AddFoodCategoryBodyDTO,
+  AddRestaurantBodyDTO,
+} from 'src/routes/admin/admin.dto';
 import { AdminService } from 'src/routes/admin/admin.service';
 
 @Controller('admin')
@@ -73,5 +77,64 @@ export class AdminController {
   @ApiOperation({ summary: 'Lấy thông tin 1 nhà hàng' })
   async getRestaurant(@Param('restaurant_id') restaurant_id: string) {
     return this.adminService.getRestaurant(restaurant_id);
+  }
+
+  /**
+   * Món ăn
+   */
+
+  // Thêm món ăn
+  @Post('restaurant/:restaurant_id/food')
+  @ApiBody({ type: AddFoodBodyDTO })
+  @ApiOperation({ summary: 'Thêm món ăn' })
+  async addFood(
+    @Param('restaurant_id') restaurant_id: string,
+    @Body() body: AddFoodBodyDTO,
+  ) {
+    return this.adminService.addFood(restaurant_id, body);
+  }
+
+  // Thêm danh mục cho món ăn
+  @Post('restaurant/:restaurant_id/food/:item_id/category')
+  @ApiBody({ type: AddFoodCategoryBodyDTO })
+  @ApiOperation({ summary: 'Thêm danh mục cho món ăn' })
+  async addFoodCategory(
+    @Param('restaurant_id') restaurant_id: string,
+    @Param('item_id') item_id: string,
+    @Body() body: AddFoodCategoryBodyDTO,
+  ) {
+    return this.adminService.addFoodCategory(restaurant_id, item_id, body);
+  }
+
+  // Sửa món ăn
+  @Put('restaurant/:restaurant_id/food/:item_id')
+  @ApiBody({ type: AddFoodBodyDTO })
+  @ApiOperation({ summary: 'Sửa món ăn' })
+  async updateFood(
+    @Param('restaurant_id') restaurant_id: string,
+    @Param('item_id') item_id: string,
+    @Body() body: AddFoodBodyDTO,
+  ) {
+    return this.adminService.updateFood(restaurant_id, item_id, body);
+  }
+
+  // Xóa món ăn hoặc hết hàng
+  @Delete('restaurant/:restaurant_id/food/:item_id')
+  @ApiOperation({ summary: 'Xóa món ăn hoặc hết hàng' })
+  async deleteFood(
+    @Param('restaurant_id') restaurant_id: string,
+    @Param('item_id') item_id: string,
+  ) {
+    return this.adminService.deleteFood(restaurant_id, item_id);
+  }
+
+  // Active món ăn
+  @Put('restaurant/:restaurant_id/food/:item_id/active')
+  @ApiOperation({ summary: 'Active món ăn' })
+  async activeFood(
+    @Param('restaurant_id') restaurant_id: string,
+    @Param('item_id') item_id: string,
+  ) {
+    return this.adminService.activeFood(restaurant_id, item_id);
   }
 }
