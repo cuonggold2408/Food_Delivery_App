@@ -13,6 +13,7 @@ import {
   AddFoodBodyDTO,
   AddFoodCategoryBodyDTO,
   AddRestaurantBodyDTO,
+  CreateDiscountCodeBodyDTO,
 } from 'src/routes/admin/admin.dto';
 import { AdminService } from 'src/routes/admin/admin.service';
 
@@ -20,6 +21,42 @@ import { AdminService } from 'src/routes/admin/admin.service';
 @ApiBearerAuth()
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
+
+  /**
+   * Xem đánh giá và phản hồi
+   */
+
+  // Xem đánh giá và phản hồi
+  @Get('restaurant/reviews')
+  @ApiOperation({ summary: 'Xem đánh giá và phản hồi' })
+  async getReviews() {
+    return this.adminService.getReviews();
+  }
+
+  // Xem review của 1 nhà hàng
+  @Get('restaurant/:restaurant_id/reviews')
+  @ApiOperation({ summary: 'Xem review của 1 nhà hàng' })
+  async getReviewsByRestaurant(@Param('restaurant_id') restaurant_id: string) {
+    return this.adminService.getReviewsByRestaurant(restaurant_id);
+  }
+
+  // Reply review
+  @Post('restaurant/reviews/:review_id/reply')
+  @ApiOperation({ summary: 'Reply review' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        review_reply: { type: 'string' },
+      },
+    },
+  })
+  async replyReview(
+    @Param('review_id') review_id: string,
+    @Body() body: { review_reply: string },
+  ) {
+    return this.adminService.replyReview(review_id, body);
+  }
 
   /**
    Restaurant 
@@ -153,5 +190,58 @@ export class AdminController {
   @ApiOperation({ summary: 'Done order bắn thông báo đẩy đến user' })
   async doneOrder(@Param('order_id') order_id: string) {
     return this.adminService.doneOrder(order_id);
+  }
+
+  /**
+   * Quản lý user
+   */
+
+  // Hiển thị danh sách user
+  @Get('users')
+  @ApiOperation({ summary: 'Hiển thị danh sách user' })
+  async getUsers(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.adminService.getUsers(page, limit);
+  }
+
+  // Block user
+  @Put('users/:user_id/block')
+  @ApiOperation({ summary: 'Block user' })
+  async blockUser(@Param('user_id') user_id: string) {
+    return this.adminService.blockUser(user_id);
+  }
+
+  // Unblock user
+  @Put('users/:user_id/unblock')
+  @ApiOperation({ summary: 'Unblock user' })
+  async unblockUser(@Param('user_id') user_id: string) {
+    return this.adminService.unblockUser(user_id);
+  }
+
+  /**
+   * Báo cáo và phân tích doanh thu
+   */
+
+  // Hiển thị báo cáo và phân tích doanh thu
+  @Get('report')
+  @ApiOperation({ summary: 'Hiển thị báo cáo và phân tích doanh thu' })
+  async getReport() {
+    return this.adminService.getReport();
+  }
+
+  /**
+   * Tạo mã giảm giá cho từng nhà hàng
+   */
+
+  // Tạo mã giảm giá cho từng nhà hàng
+  @Post('restaurant/:restaurant_id/discount-code')
+  @ApiOperation({ summary: 'Tạo mã giảm giá cho từng nhà hàng' })
+  async createDiscountCode(
+    @Param('restaurant_id') restaurant_id: string,
+    @Body() body: CreateDiscountCodeBodyDTO,
+  ) {
+    return this.adminService.createDiscountCode(restaurant_id, body);
   }
 }

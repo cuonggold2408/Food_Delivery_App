@@ -10,6 +10,9 @@ import { ItemCustomizationCategory } from 'src/database/entities/restaurant/cate
 import { CustomizationCategory } from 'src/database/entities/restaurant/category/customization-category.entity';
 import { Order } from 'src/database/entities/order/order.entity';
 import { FirebaseModule } from 'src/routes/firebase/firebase.module';
+import { User } from 'src/database/entities/user.entity';
+import { Promotion } from 'src/database/entities/restaurant/promotions/promotion.entity';
+import { Review } from 'src/database/entities/review/review.entity';
 
 @Module({
   imports: [
@@ -20,6 +23,9 @@ import { FirebaseModule } from 'src/routes/firebase/firebase.module';
       ItemCustomizationCategory,
       CustomizationCategory,
       Order,
+      User,
+      Promotion,
+      Review,
     ]),
     FirebaseModule,
   ],

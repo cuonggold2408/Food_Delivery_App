@@ -122,6 +122,7 @@ export class OrderRepository {
     const qrLink = `https://qr.sepay.vn/img?acc=${envConfig.ACC_BANK}&bank=${envConfig.SHORT_BANK}&amount=${order.total_amount}&des=DH${order.payment.payment_id}`;
 
     return {
+      order_id: order.order_id,
       qr_link: qrLink,
       time_out: new Date(Date.now() + 1000 * 60 * 10),
     };

@@ -27,6 +27,9 @@ export class User {
   @Column({ type: 'varchar', length: 255, nullable: false, default: '' })
   phone_number: string;
 
+  @Column({ type: 'boolean', default: false })
+  is_blocked: boolean;
+
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 

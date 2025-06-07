@@ -27,3 +27,20 @@ export const AddFoodCategoryBodySchema = z.object({
 });
 
 export type AddFoodCategoryBodyType = z.infer<typeof AddFoodCategoryBodySchema>;
+
+export const CreateDiscountCodeBodySchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  promo_code: z.string(),
+  discount_type: z.string(),
+  discount_value: z.number(),
+  min_order_value: z.number(),
+  max_discount_amount: z.number(),
+  end_date: z.number(),
+  usage_limit: z.number(),
+  is_active: z.boolean().default(true),
+});
+
+export type CreateDiscountCodeBodyType = z.infer<
+  typeof CreateDiscountCodeBodySchema
+>;

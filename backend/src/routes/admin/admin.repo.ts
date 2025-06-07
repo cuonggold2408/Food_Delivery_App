@@ -5,11 +5,15 @@ import { Order, OrderStatus } from 'src/database/entities/order/order.entity';
 import { CustomizationCategory } from 'src/database/entities/restaurant/category/customization-category.entity';
 import { ItemCustomizationCategory } from 'src/database/entities/restaurant/category/item-customization-category.entity';
 import { MenuCategory } from 'src/database/entities/restaurant/category/menu-categories.entity';
+import { Promotion } from 'src/database/entities/restaurant/promotions/promotion.entity';
 import { Restaurant } from 'src/database/entities/restaurant/restaurant.entity';
+import { Review } from 'src/database/entities/review/review.entity';
+import { User } from 'src/database/entities/user.entity';
 import {
   AddFoodBodyType,
   AddFoodCategoryBodyType,
   AddRestaurantBodyType,
+  CreateDiscountCodeBodyType,
 } from 'src/routes/admin/admin.model';
 import { FirebaseRepository } from 'src/routes/firebase/firebase.repo';
 import { Repository } from 'typeorm';
@@ -37,6 +41,15 @@ export class AdminRepository {
     private readonly orderRepository: Repository<Order>,
 
     private readonly firebaseRepository: FirebaseRepository,
+
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+
+    @InjectRepository(Promotion)
+    private readonly promotionRepository: Repository<Promotion>,
+
+    @InjectRepository(Review)
+    private readonly reviewRepository: Repository<Review>,
   ) {}
 
   /**
@@ -352,6 +365,191 @@ export class AdminRepository {
 
     return {
       message: 'Done order thành công',
+    };
+  }
+
+  /**
+   * Quản lý user
+   */
+  async getUsers(page: number, limit: number) {
+    const skip = (page - 1) * limit;
+    const [users, total] = await this.userRepository.findAndCount({
+      skip,
+      take: limit,
+      select: [
+        'user_id',
+        'email',
+        'name',
+        'user_role',
+        'bio',
+        'phone_number',
+        'is_blocked',
+        'created_at',
+        'updated_at',
+      ],
+    });
+
+    return {
+      users,
+      total,
+    };
+  }
+
+  async blockUser(user_id: string) {
+    await this.userRepository.update(user_id, {
+      is_blocked: true,
+    });
+
+    return {
+      message: 'Block user thành công',
+    };
+  }
+
+  async unblockUser(user_id: string) {
+    await this.userRepository.update(user_id, {
+      is_blocked: false,
+    });
+
+    return {
+      message: 'Unblock user thành công',
+    };
+  }
+
+  /**
+   * Báo cáo và phân tích doanh thu
+   */
+  // Lấy tổng doanh thu theo tháng, theo năm
+  async getReport() {
+    const report = await this.orderRepository.find({
+      select: {
+        order_id: true,
+        created_at: true,
+        total_amount: true,
+        order_status: true,
+        payment_method: true,
+      },
+      where: {
+        order_status: OrderStatus.DELIVERED,
+      },
+    });
+
+    const totalRevenue = report.reduce(
+      (acc, curr) => acc + Number(curr.total_amount),
+      0,
+    );
+
+    // Lấy tổng doanh thu theo tháng
+    const totalRevenueByMonth = report.reduce((acc, curr) => {
+      const month = curr.created_at.getMonth();
+      acc[month] = (acc[month] || 0) + Number(curr.total_amount);
+      return acc;
+    }, {});
+
+    // Lấy tổng doanh thu theo năm
+    const totalRevenueByYear = report.reduce((acc, curr) => {
+      const year = curr.created_at.getFullYear();
+      acc[year] = (acc[year] || 0) + Number(curr.total_amount);
+      return acc;
+    }, {});
+
+    return { totalRevenue, totalRevenueByMonth, totalRevenueByYear };
+  }
+
+  /**
+   * Tạo mã giảm giá cho từng nhà hàng
+   */
+  async createDiscountCode(
+    restaurant_id: string,
+    body: CreateDiscountCodeBodyType,
+  ) {
+    const {
+      title,
+      description,
+      promo_code,
+      discount_type,
+      discount_value,
+      min_order_value,
+      max_discount_amount,
+      end_date,
+      usage_limit,
+    } = body;
+
+    // Nếu end_date là số → cộng thêm số ngày
+    const parsedEndDate =
+      typeof end_date === 'number'
+        ? new Date(Date.now() + end_date * 24 * 60 * 60 * 1000)
+        : new Date(end_date);
+
+    const newDiscountCode = this.promotionRepository.create({
+      title,
+      description,
+      promoCode: promo_code,
+      discountType: discount_type,
+      discountValue: Number(discount_value),
+      minOrderValue: Number(min_order_value),
+      maxDiscountAmount: Number(max_discount_amount),
+      startDate: new Date(),
+      endDate: parsedEndDate,
+      usageLimit: usage_limit,
+      restaurant: {
+        restaurant_id,
+      },
+    } as unknown as Promotion);
+
+    await this.promotionRepository.save(newDiscountCode);
+
+    return {
+      message: 'Tạo mã giảm giá thành công',
+    };
+  }
+
+  /**
+   * Xem đánh giá và phản hồi
+   */
+  async getReviews() {
+    const reviews = await this.reviewRepository.find({
+      relations: ['order', 'order.restaurant'],
+    });
+
+    return reviews;
+  }
+
+  async getReviewsByRestaurant(restaurant_id: string) {
+    const reviews = await this.reviewRepository.find({
+      where: {
+        order: {
+          restaurant: {
+            restaurant_id,
+          },
+        },
+      },
+      relations: ['order', 'order.user', 'menuItem'],
+    });
+
+    return reviews.map((review) => {
+      const { order, ...reviewData } = review;
+      return {
+        ...reviewData,
+        user: order.user.name,
+        menuItem: {
+          name: review.menuItem.name,
+          price: review.menuItem.price,
+          image_url: review.menuItem.image_url,
+        },
+      };
+    });
+  }
+
+  async replyReview(review_id: string, body: { review_reply: string }) {
+    const { review_reply } = body;
+
+    await this.reviewRepository.update(review_id, {
+      review_reply,
+      reply_date: new Date(),
+    });
+
+    return {
+      message: 'Reply review thành công',
     };
   }
 }

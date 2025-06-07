@@ -3,6 +3,7 @@ import {
   AddFoodBodyType,
   AddFoodCategoryBodyType,
   AddRestaurantBodyType,
+  CreateDiscountCodeBodyType,
 } from 'src/routes/admin/admin.model';
 import { AdminRepository } from 'src/routes/admin/admin.repo';
 
@@ -79,5 +80,52 @@ export class AdminService {
 
   async doneOrder(order_id: string) {
     return this.adminRepository.doneOrder(order_id);
+  }
+
+  /**
+   * Quản lý user
+   */
+  async getUsers(page: number, limit: number) {
+    return this.adminRepository.getUsers(page, limit);
+  }
+
+  async blockUser(user_id: string) {
+    return this.adminRepository.blockUser(user_id);
+  }
+
+  async unblockUser(user_id: string) {
+    return this.adminRepository.unblockUser(user_id);
+  }
+
+  /**
+   * Báo cáo và phân tích doanh thu
+   */
+  async getReport() {
+    return this.adminRepository.getReport();
+  }
+
+  /**
+   * Tạo mã giảm giá cho từng nhà hàng
+   */
+  async createDiscountCode(
+    restaurant_id: string,
+    body: CreateDiscountCodeBodyType,
+  ) {
+    return this.adminRepository.createDiscountCode(restaurant_id, body);
+  }
+
+  /**
+   * Xem đánh giá và phản hồi
+   */
+  async getReviews() {
+    return this.adminRepository.getReviews();
+  }
+
+  async getReviewsByRestaurant(restaurant_id: string) {
+    return this.adminRepository.getReviewsByRestaurant(restaurant_id);
+  }
+
+  async replyReview(review_id: string, body: { review_reply: string }) {
+    return this.adminRepository.replyReview(review_id, body);
   }
 }
