@@ -23,6 +23,7 @@ import { WebsocketModule } from 'src/websockets/websocket.module';
 import { FirebaseModule } from './routes/firebase/firebase.module';
 import { MediaModule } from './routes/media/media.module';
 import { ReviewModule } from './routes/review/review.module';
+import { AdminModule } from './routes/admin/admin.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { ReviewModule } from './routes/review/review.module';
     FirebaseModule,
     MediaModule,
     ReviewModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [
