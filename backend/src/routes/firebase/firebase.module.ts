@@ -41,7 +41,7 @@ import { Order } from 'src/database/entities/order/order.entity';
     FirebaseService,
     FirebaseRepository,
   ],
-  exports: ['FIREBASE_ADMIN'],
+  exports: ['FIREBASE_ADMIN', FirebaseService, FirebaseRepository],
   controllers: [FirebaseController],
 })
 export class FirebaseModule {}

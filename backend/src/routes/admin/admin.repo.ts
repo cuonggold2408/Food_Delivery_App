@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MenuItem } from 'src/database/entities/menu-item.entity';
+import { Order, OrderStatus } from 'src/database/entities/order/order.entity';
 import { CustomizationCategory } from 'src/database/entities/restaurant/category/customization-category.entity';
 import { ItemCustomizationCategory } from 'src/database/entities/restaurant/category/item-customization-category.entity';
 import { MenuCategory } from 'src/database/entities/restaurant/category/menu-categories.entity';
@@ -10,6 +11,7 @@ import {
   AddFoodCategoryBodyType,
   AddRestaurantBodyType,
 } from 'src/routes/admin/admin.model';
+import { FirebaseRepository } from 'src/routes/firebase/firebase.repo';
 import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -30,6 +32,11 @@ export class AdminRepository {
 
     @InjectRepository(CustomizationCategory)
     private readonly customizationCategoryRepository: Repository<CustomizationCategory>,
+
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
+
+    private readonly firebaseRepository: FirebaseRepository,
   ) {}
 
   /**
@@ -291,6 +298,60 @@ export class AdminRepository {
 
     return {
       message: 'Active món ăn thành công',
+    };
+  }
+
+  /**
+   * Quản lý order
+   */
+
+  async getOrders(page: number, limit: number) {
+    const skip = (page - 1) * limit;
+    const [orders, total] = await this.orderRepository.findAndCount({
+      skip,
+      take: limit,
+      where: {
+        order_status: OrderStatus.PENDING_PICKUP,
+      },
+      relations: ['restaurant', 'payment'],
+    });
+
+    return {
+      orders,
+      total,
+    };
+  }
+
+  async doneOrder(order_id: string) {
+    // Lấy thông tin đơn hàng với relations để có thông tin user và restaurant
+    const order = await this.orderRepository.findOne({
+      where: { order_id: parseInt(order_id) },
+      relations: ['user', 'restaurant'],
+    });
+
+    if (!order) {
+      throw new BadRequestException('Đơn hàng không tồn tại');
+    }
+
+    // Cập nhật trạng thái đơn hàng
+    await this.orderRepository.update(order_id, {
+      order_status: OrderStatus.PENDING_DELIVERY,
+    });
+
+    // Gửi thông báo đẩy cho user
+    try {
+      await this.firebaseRepository.sendOrderStatusNotification({
+        orderId: parseInt(order_id),
+        userId: order.user.user_id,
+        status: OrderStatus.PENDING_DELIVERY,
+        restaurantName: order.restaurant.name,
+      });
+    } catch (error) {
+      console.error('Lỗi khi gửi thông báo:', error);
+    }
+
+    return {
+      message: 'Done order thành công',
     };
   }
 }

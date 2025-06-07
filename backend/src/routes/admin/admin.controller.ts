@@ -137,4 +137,21 @@ export class AdminController {
   ) {
     return this.adminService.activeFood(restaurant_id, item_id);
   }
+
+  // Hiển thị danh sách order
+  @Get('orders')
+  @ApiOperation({ summary: 'Hiển thị danh sách order' })
+  async getOrders(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.adminService.getOrders(page, limit);
+  }
+
+  // Done order bắn thông báo đẩy đến user
+  @Put('orders/:order_id/done')
+  @ApiOperation({ summary: 'Done order bắn thông báo đẩy đến user' })
+  async doneOrder(@Param('order_id') order_id: string) {
+    return this.adminService.doneOrder(order_id);
+  }
 }

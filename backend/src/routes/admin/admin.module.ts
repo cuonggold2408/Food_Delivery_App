@@ -8,6 +8,8 @@ import { MenuItem } from 'src/database/entities/menu-item.entity';
 import { MenuCategory } from 'src/database/entities/restaurant/category/menu-categories.entity';
 import { ItemCustomizationCategory } from 'src/database/entities/restaurant/category/item-customization-category.entity';
 import { CustomizationCategory } from 'src/database/entities/restaurant/category/customization-category.entity';
+import { Order } from 'src/database/entities/order/order.entity';
+import { FirebaseModule } from 'src/routes/firebase/firebase.module';
 
 @Module({
   imports: [
@@ -17,7 +19,9 @@ import { CustomizationCategory } from 'src/database/entities/restaurant/category
       MenuCategory,
       ItemCustomizationCategory,
       CustomizationCategory,
+      Order,
     ]),
+    FirebaseModule,
   ],
   controllers: [AdminController],
   providers: [AdminService, AdminRepository],

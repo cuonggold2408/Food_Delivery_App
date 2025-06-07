@@ -72,4 +72,12 @@ export class AdminService {
   async activeFood(restaurant_id: string, item_id: string) {
     return this.adminRepository.activeFood(restaurant_id, item_id);
   }
+
+  async getOrders(page: number, limit: number) {
+    return this.adminRepository.getOrders(page, limit);
+  }
+
+  async doneOrder(order_id: string) {
+    return this.adminRepository.doneOrder(order_id);
+  }
 }
