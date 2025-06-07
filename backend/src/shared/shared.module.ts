@@ -25,6 +25,8 @@ import { Payment } from 'src/database/entities/payment/payment.entity';
 import { SharedWebSocketRepository } from 'src/shared/repositories/shared-websocket.repo';
 import { WebSocket } from 'src/database/entities/websocket/websocket.entity';
 import { S3Service } from 'src/shared/services/s3.service';
+import { Chat } from 'src/database/entities/chat/chat.entity';
+import { Message } from 'src/database/entities/chat/message.entity';
 
 const sharedServices = [
   HashingService,
@@ -64,6 +66,8 @@ const sharedServices = [
       MenuCategory,
       Payment,
       WebSocket,
+      Chat,
+      Message,
     ]),
   ],
 })

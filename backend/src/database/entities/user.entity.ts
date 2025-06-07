@@ -1,4 +1,6 @@
 import { AuthProvider } from 'src/database/entities/auth-provider.entity';
+import { Chat } from 'src/database/entities/chat/chat.entity';
+import { Message } from 'src/database/entities/chat/message.entity';
 import { UserFavoriteRestaurant } from 'src/database/entities/restaurant/favorite/user-favorite.entity';
 import { UserAddress } from 'src/database/entities/user-address.entity';
 import { WebSocket } from 'src/database/entities/websocket/websocket.entity';
@@ -51,4 +53,14 @@ export class User {
 
   @OneToMany(() => WebSocket, (websocket) => websocket.user)
   websockets: WebSocket[];
+
+  // Chat relationships
+  @OneToMany(() => Chat, (chat) => chat.user)
+  user_chats: Chat[];
+
+  @OneToMany(() => Chat, (chat) => chat.admin)
+  admin_chats: Chat[];
+
+  @OneToMany(() => Message, (message) => message.sender)
+  sent_messages: Message[];
 }

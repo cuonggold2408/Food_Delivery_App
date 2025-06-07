@@ -24,6 +24,7 @@ import { FirebaseModule } from './routes/firebase/firebase.module';
 import { MediaModule } from './routes/media/media.module';
 import { ReviewModule } from './routes/review/review.module';
 import { AdminModule } from './routes/admin/admin.module';
+import { ChatModule } from './routes/chat/chat.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { AdminModule } from './routes/admin/admin.module';
     MediaModule,
     ReviewModule,
     AdminModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [
