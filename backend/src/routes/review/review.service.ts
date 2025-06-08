@@ -20,4 +20,8 @@ export class ReviewService {
   async update(userId: number, reviewId: number, body: UpdateReviewBodyType) {
     return this.reviewRepository.update({ userId, reviewId, body });
   }
+
+  async getUnratedOrders(userId: number) {
+    return this.reviewRepository.getUnratedOrders(userId);
+  }
 }

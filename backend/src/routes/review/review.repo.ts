@@ -287,4 +287,28 @@ export class ReviewRepository {
       };
     });
   }
+
+  async getUnratedOrders(userId: number) {
+    const orders = await this.orderRepository.find({
+      where: {
+        user: { user_id: userId },
+        order_status: OrderStatus.DELIVERED,
+      },
+    });
+
+    const reviews = await this.reviewRepository.find({
+      where: {
+        user: { user_id: userId },
+      },
+      relations: ['order'],
+    });
+
+    const unratedOrders = orders.filter((order) => {
+      return !reviews.some(
+        (review) => review.order.order_id === order.order_id,
+      );
+    });
+
+    return unratedOrders;
+  }
 }

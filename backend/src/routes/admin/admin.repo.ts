@@ -440,10 +440,17 @@ export class AdminRepository {
 
     // Lấy tổng doanh thu theo tháng
     const totalRevenueByMonth = report.reduce((acc, curr) => {
-      const month = curr.created_at.getMonth();
+      console.log(curr.created_at);
+      const month = curr.created_at.getMonth() + 1;
       acc[month] = (acc[month] || 0) + Number(curr.total_amount);
       return acc;
     }, {});
+
+    // Chuyển đổi thành array đủ 12 tháng
+    const totalRevenueByMonthArray = Array.from({ length: 12 }, (_, index) => ({
+      month: index + 1,
+      revenue: totalRevenueByMonth[index + 1] || 0,
+    }));
 
     // Lấy tổng doanh thu theo năm
     const totalRevenueByYear = report.reduce((acc, curr) => {
@@ -452,7 +459,11 @@ export class AdminRepository {
       return acc;
     }, {});
 
-    return { totalRevenue, totalRevenueByMonth, totalRevenueByYear };
+    return {
+      totalRevenue,
+      totalRevenueByMonth: totalRevenueByMonthArray,
+      totalRevenueByYear,
+    };
   }
 
   /**

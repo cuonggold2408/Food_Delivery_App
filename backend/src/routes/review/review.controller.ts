@@ -50,4 +50,15 @@ export class ReviewController {
     const userId = req.user.user_id;
     return this.reviewService.update(userId, reviewId, body);
   }
+
+  // Lấy danh sách đơn hàng đã được giao nhưng chưa đánh giá
+  @Get('unrated-orders')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Lấy danh sách đơn hàng đã được giao nhưng chưa đánh giá',
+  })
+  async getUnratedOrders(@Req() req: any) {
+    const userId = req.user.user_id;
+    return this.reviewService.getUnratedOrders(userId);
+  }
 }
