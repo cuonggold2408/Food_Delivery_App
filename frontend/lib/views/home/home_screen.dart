@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/views/restaurants/restaurant_screen.dart';
 import 'package:frontend/views/settings/address_screen.dart' as address_screen;
+
+
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:frontend/views/settings/menu.dart';
@@ -136,6 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<List<String>> _fetchCategories() async {
     try {
       final response = await http.get(
+
         Uri.parse('https://api.df.nguyenquangcuong.pro/restaurants/categories/'),
       );
       print('Categories API Status: ${response.statusCode}');
@@ -192,7 +195,6 @@ class _HomeScreenState extends State<HomeScreen> {
           throw Exception(
             'Invalid API response: "data" or "data.data" field is missing',
           );
-        }
 
         List<dynamic> shopsList = jsonData['data']['data'];
         print('Extracted shop data: $shopsList');
@@ -241,6 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to load restaurants: $e')));
+
     }
   }
 
@@ -479,6 +482,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
+
+                      Text(
+                        'Halal Lab office',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: _fontFamily,
+                          color: _textColor,
                         ),
                       ),
                       const Icon(Icons.arrow_drop_down),

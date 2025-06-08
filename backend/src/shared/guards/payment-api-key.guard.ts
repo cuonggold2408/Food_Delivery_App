@@ -7,12 +7,11 @@ import {
 import envConfig from 'src/shared/config';
 
 @Injectable()
-export class ApiKeyGuard implements CanActivate {
+export class PaymentApiKeyGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
-    const xAPIKey = request.headers['x-api-key'];
-
-    if (xAPIKey !== envConfig.SECRET_API_KEY) {
+    const paymentApiKey = request.headers['authorization']?.split(' ')[1];
+    if (paymentApiKey !== envConfig.PAYMENT_API_KEY) {
       throw new UnauthorizedException();
     }
     return true;

@@ -13,13 +13,20 @@ import { RestaurantCategory } from 'src/database/entities/restaurant/restaurant-
 import { Restaurant } from 'src/database/entities/restaurant/restaurant.entity';
 import { User } from 'src/database/entities/user.entity';
 import { AccessTokenGuard } from 'src/shared/guards/access-token.guard';
-import { ApiKeyGuard } from 'src/shared/guards/api-key.guard';
+import { PaymentApiKeyGuard } from 'src/shared/guards/payment-api-key.guard';
 import { AuthenticationGuard } from 'src/shared/guards/authentication.guard';
 import { SharedUserRepository } from 'src/shared/repositories/shared-user.repo';
 import { EmailService } from 'src/shared/services/email.service';
 import { HashingService } from 'src/shared/services/hashing.service';
 import { SeedService } from 'src/shared/services/seed.service';
 import { TokenService } from 'src/shared/services/token.service';
+import { SharedPaymentRepository } from 'src/shared/repositories/shared-payment.repo';
+import { Payment } from 'src/database/entities/payment/payment.entity';
+import { SharedWebSocketRepository } from 'src/shared/repositories/shared-websocket.repo';
+import { WebSocket } from 'src/database/entities/websocket/websocket.entity';
+import { S3Service } from 'src/shared/services/s3.service';
+import { Chat } from 'src/database/entities/chat/chat.entity';
+import { Message } from 'src/database/entities/chat/message.entity';
 
 const sharedServices = [
   HashingService,
@@ -27,13 +34,16 @@ const sharedServices = [
   SharedUserRepository,
   EmailService,
   SeedService,
+  SharedPaymentRepository,
+  SharedWebSocketRepository,
+  S3Service,
 ];
 
 @Global()
 @Module({
   providers: [
     ...sharedServices,
-    ApiKeyGuard,
+    PaymentApiKeyGuard,
     AccessTokenGuard,
     {
       provide: APP_GUARD,
@@ -54,6 +64,10 @@ const sharedServices = [
       CustomizationCategory,
       ItemCustomizationCategory,
       MenuCategory,
+      Payment,
+      WebSocket,
+      Chat,
+      Message,
     ]),
   ],
 })

@@ -102,8 +102,6 @@ export class CartRepository {
         ],
       });
 
-      console.log('existingCartItem: ', existingCartItem);
-
       if (existingCartItem.length > 0) {
         // Duyệt qua từng cart item để kiểm tra customizations
         for (const cartItem of existingCartItem) {
@@ -115,12 +113,6 @@ export class CartRepository {
               },
               relations: ['option'],
             });
-
-          // console.log('Cart Item Customizations:', cartItemCustomizations);
-          // console.log(
-          //   'Menu Item Customization Categories:',
-          //   cartItem.menuItem.customizationMappings,
-          // );
 
           // So sánh customizations
           const isSameCustomizations = this.compareCustomizations(
@@ -240,8 +232,14 @@ export class CartRepository {
   async getCart(user_id: number, restaurantId: string) {
     const cart = await this.cartRepository.findOne({
       where: { user: { user_id }, restaurant: { restaurant_id: restaurantId } },
-      relations: ['items', 'items.customizations.option', 'restaurant'],
+      relations: [
+        'items',
+        'items.customizations.option',
+        'restaurant',
+        'restaurant.promotions',
+      ],
     });
+
     if (!cart) {
       return null;
     }
@@ -267,9 +265,13 @@ export class CartRepository {
         : '';
 
       return {
+        item_id: item.menuItem.item_id,
         image_dish: item.menuItem.image_url,
         name_dish: item.menuItem.name,
         option_name: option_names, // Tên các option
+        option_id: item.customizations.map(
+          (customization) => customization.option_id,
+        ),
         message: item.message || '', // Nếu có message
         total_pay: parseFloat(item.total_pay).toFixed(0).toString(),
         quantity: item.quantity,
@@ -280,6 +282,7 @@ export class CartRepository {
       quantity_item,
       total_pay: total_pay.toString(),
       restaurant_name: cart.restaurant.name,
+      promotions: cart.restaurant.promotions,
       items,
     };
   }

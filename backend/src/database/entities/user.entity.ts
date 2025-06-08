@@ -1,6 +1,9 @@
 import { AuthProvider } from 'src/database/entities/auth-provider.entity';
+import { Chat } from 'src/database/entities/chat/chat.entity';
+import { Message } from 'src/database/entities/chat/message.entity';
 import { UserFavoriteRestaurant } from 'src/database/entities/restaurant/favorite/user-favorite.entity';
 import { UserAddress } from 'src/database/entities/user-address.entity';
+import { WebSocket } from 'src/database/entities/websocket/websocket.entity';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('users')
@@ -26,6 +29,9 @@ export class User {
   @Column({ type: 'varchar', length: 255, nullable: false, default: '' })
   phone_number: string;
 
+  @Column({ type: 'boolean', default: false })
+  is_blocked: boolean;
+
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 
@@ -44,4 +50,17 @@ export class User {
 
   @OneToMany(() => UserFavoriteRestaurant, (favorite) => favorite.user)
   user_favorite_restaurants: UserFavoriteRestaurant[];
+
+  @OneToMany(() => WebSocket, (websocket) => websocket.user)
+  websockets: WebSocket[];
+
+  // Chat relationships
+  @OneToMany(() => Chat, (chat) => chat.user)
+  user_chats: Chat[];
+
+  @OneToMany(() => Chat, (chat) => chat.admin)
+  admin_chats: Chat[];
+
+  @OneToMany(() => Message, (message) => message.sender)
+  sent_messages: Message[];
 }

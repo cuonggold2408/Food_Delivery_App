@@ -22,7 +22,9 @@ class Menu extends StatefulWidget {
 
 class _MenuState extends State<Menu> {
   String _userName = 'Guest';
+
   int? _userId; // Store userId from profile
+
 
   @override
   void initState() {
@@ -307,6 +309,7 @@ class _MenuState extends State<Menu> {
                             ),
                           ),
                         );
+
                         if (result != null) {
                           Navigator.pop(context, result);
                         }

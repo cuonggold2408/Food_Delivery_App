@@ -1,6 +1,7 @@
 import { MenuItem } from 'src/database/entities/menu-item.entity';
 import { MenuCategory } from 'src/database/entities/restaurant/category/menu-categories.entity';
 import { UserFavoriteRestaurant } from 'src/database/entities/restaurant/favorite/user-favorite.entity';
+import { Promotion } from 'src/database/entities/restaurant/promotions/promotion.entity';
 import { RestaurantCategoryMapping } from 'src/database/entities/restaurant/restaurant-category-mapping.entity';
 import { Entity, Column, OneToMany, Index, PrimaryColumn } from 'typeorm';
 
@@ -57,4 +58,9 @@ export class Restaurant {
     },
   )
   userFavorites: UserFavoriteRestaurant[];
+
+  @OneToMany(() => Promotion, (promotion) => promotion.restaurant, {
+    cascade: true,
+  })
+  promotions: Promotion[];
 }

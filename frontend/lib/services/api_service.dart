@@ -8,8 +8,10 @@ class ApiService {
   static final Dio _dio = Dio(
     BaseOptions(
       baseUrl: 'https://api.df.nguyenquangcuong.pro',
+
       connectTimeout: const Duration(seconds: 60),
       receiveTimeout: const Duration(seconds: 60),
+
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -248,11 +250,9 @@ class ApiService {
     }
   }
 
-
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('auth_token');
     // return prefs.containsKey('auth_token');
   }
-
 }
