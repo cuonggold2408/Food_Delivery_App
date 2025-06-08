@@ -234,7 +234,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                   Text(address.label), // Sử dụng label thay vì hardcode 'Home'
                   const SizedBox(height: 4.0),
                   Text(
-                    '${address.addressName}',
+                    address.addressName,
                     style: textTheme.bodyMedium?.copyWith(color: Colors.grey),
                   ),
                 ],

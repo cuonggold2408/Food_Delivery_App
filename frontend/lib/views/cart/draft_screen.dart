@@ -34,7 +34,9 @@ class _DraftPageState extends State<DraftPage> {
 
       final response = await http.get(
 
-        Uri.parse('https://api.df.nguyenquangcuong.pro/cart'),
+        Uri.parse('https://api.df.nguyenquangcuong.pro/cart/all'),
+
+//         Uri.parse('https://api.df.nguyenquangcuong.pro/cart'),
 
         headers: headers,
       );

@@ -1,13 +1,17 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   static final Dio _dio = Dio(
     BaseOptions(
       baseUrl: 'https://api.df.nguyenquangcuong.pro',
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
+
+      connectTimeout: const Duration(seconds: 60),
+      receiveTimeout: const Duration(seconds: 60),
+
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -16,6 +20,10 @@ class ApiService {
   );
 
   static void initialize() {
+    (_dio.httpClientAdapter as IOHttpClientAdapter).onHttpClientCreate = (client) {
+      client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+      return client;
+    };
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -69,7 +77,7 @@ class ApiService {
     try {
       final response = await _dio.post(
         '/auth/login',
-        data: jsonEncode({'email': email, 'password': password}),
+        data: {'email': email, 'password': password},
         options: Options(
           headers: {'Content-Type': 'application/json'},
           validateStatus: (status) => status! < 500,

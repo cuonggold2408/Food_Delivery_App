@@ -28,9 +28,7 @@ Future<void> saveAddress({
   final url =
       addressId == null
           ? Uri.parse('https://api.df.nguyenquangcuong.pro/user/address')
-          : Uri.parse(
-            'https://api.df.nguyenquangcuong.pro/user/address/$addressId',
-          );
+          : Uri.parse('https://api.df.nguyenquangcuong.pro/user/address/$addressId');
   final method = addressId == null ? http.post : http.put;
 
   final headers = {
@@ -299,8 +297,10 @@ class _MapSectionState extends State<MapSection> {
   GoogleMapController? _mapController;
   LatLng _selectedPosition = kDefaultLatLng;
   Set<Marker> _markers = {};
+
   Map<LatLng, String> _addressCache = {};
   double _currentZoom = 15.0;
+
 
   @override
   void initState() {

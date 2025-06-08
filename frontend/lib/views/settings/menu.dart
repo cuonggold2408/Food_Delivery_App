@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:frontend/chat/messenger_screen.dart';
+import 'package:frontend/views/order/order_status_screen.dart';
 import 'package:frontend/views/settings/profile_screen.dart';
 import 'package:frontend/views/settings/address_screen.dart';
 import 'package:frontend/conponents/custom_snack_bar.dart';
@@ -20,6 +22,9 @@ class Menu extends StatefulWidget {
 
 class _MenuState extends State<Menu> {
   String _userName = 'Guest';
+
+  int? _userId; // Store userId from profile
+
 
   @override
   void initState() {
@@ -54,24 +59,76 @@ class _MenuState extends State<Menu> {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         final userName = jsonData['data']['name'] ?? 'Guest';
+        final userId =
+            jsonData['data']['id']; // Assuming 'id' is the user ID field
         setState(() {
           _userName = userName;
+          _userId = userId; // Store userId
         });
       } else {
         print('Failed to fetch profile: Status ${response.statusCode}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Failed to load profile: Status ${response.statusCode}',
-            ),
+        showTopSnackBar(
+          Overlay.of(context),
+          CustomSnackBar.error(
+            message: 'Failed to load profile: Status ${response.statusCode}',
           ),
         );
       }
     } catch (e) {
       print('Error fetching profile: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error fetching profile: $e')));
+      showTopSnackBar(
+        Overlay.of(context),
+        CustomSnackBar.error(message: 'Error fetching profile: $e'),
+      );
+    }
+  }
+
+  // Function to create a chat and retrieve chat ID, user ID, and admin ID
+  Future<Map<String, int>?> _getOrCreateChatId(String accessToken) async {
+    try {
+      final response = await http.post(
+        Uri.parse('https://api.df.nguyenquangcuong.pro/chat'),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'subject': 'New Chat',
+          'initial_message': 'Hello, I need assistance.',
+        }),
+      );
+
+      print('Chat API Status: ${response.statusCode}');
+      print('Chat API Response: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final jsonData = json.decode(response.body);
+        final chatId = jsonData['data']['chat_id'];
+        final userId = jsonData['data']['user_id'];
+        final adminId =
+            jsonData['data']['admin_id']; // Extract admin_id from new response
+        return {
+          'chat_id': chatId,
+          'user_id': userId,
+          'admin_id': adminId, // Include admin_id in the returned map
+        };
+      } else {
+        print('Failed to create chat: Status ${response.statusCode}');
+        showTopSnackBar(
+          Overlay.of(context),
+          CustomSnackBar.error(
+            message: 'Failed to create chat: Status ${response.statusCode}',
+          ),
+        );
+        return null;
+      }
+    } catch (e) {
+      print('Error creating chat: $e');
+      showTopSnackBar(
+        Overlay.of(context),
+        CustomSnackBar.error(message: 'Error creating chat: $e'),
+      );
+      return null;
     }
   }
 
@@ -252,7 +309,7 @@ class _MenuState extends State<Menu> {
                             ),
                           ),
                         );
-                        // Trả về kết quả (địa chỉ được chọn) cho HomeScreen
+
                         if (result != null) {
                           Navigator.pop(context, result);
                         }
@@ -266,8 +323,37 @@ class _MenuState extends State<Menu> {
                 items: [
                   _MenuItemData(
                     icon: Icons.shopping_cart,
-                    title: 'Cart',
-                    onTap: () {},
+                    title: 'Orders',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        PageRouteBuilder(
+                          pageBuilder:
+                              (context, animation, secondaryAnimation) =>
+                                  const OrderStatusScreen(),
+                          transitionsBuilder: (
+                            context,
+                            animation,
+                            secondaryAnimation,
+                            child,
+                          ) {
+                            const begin = Offset(1.0, 0.0);
+                            const end = Offset.zero;
+                            const curve = Curves.easeInOut;
+                            var tween = Tween(
+                              begin: begin,
+                              end: end,
+                            ).chain(CurveTween(curve: curve));
+                            var offsetAnimation = animation.drive(tween);
+                            return SlideTransition(
+                              position: offsetAnimation,
+                              child: child,
+                            );
+                          },
+                          transitionDuration: const Duration(milliseconds: 300),
+                        ),
+                      );
+                    },
                   ),
                   _MenuItemData(
                     icon: Icons.favorite,
@@ -299,6 +385,93 @@ class _MenuState extends State<Menu> {
                     icon: Icons.reviews,
                     title: 'User Reviews',
                     onTap: () {},
+                  ),
+                  _MenuItemData(
+                    icon: Icons.message,
+                    title: 'Message Admin',
+                    iconColor: Colors.blue,
+                    onTap: () async {
+                      final accessToken = await _getAccessToken();
+                      if (accessToken == null) {
+                        showDialog(
+                          context: context,
+                          builder:
+                              (context) => AlertDialog(
+                                title: const Text('Yêu cầu đăng nhập'),
+                                content: const Text(
+                                  'Vui lòng đăng nhập để nhắn tin với admin.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Hủy'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      Navigator.pushNamed(context, '/login');
+                                    },
+                                    child: const Text('Đăng nhập'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      Navigator.pushNamed(context, '/register');
+                                    },
+                                    child: const Text('Đăng ký'),
+                                  ),
+                                ],
+                              ),
+                        );
+                      } else {
+                        final chatData = await _getOrCreateChatId(accessToken);
+                        if (chatData != null) {
+                          setState(() {
+                            _userId = chatData['user_id'];
+                          });
+                          Navigator.push(
+                            context,
+                            PageRouteBuilder(
+                              pageBuilder:
+                                  (
+                                    context,
+                                    animation,
+                                    secondaryAnimation,
+                                  ) => ChatDetailScreen(
+                                    userId: chatData['user_id']!,
+                                    chatId: chatData['chat_id']!,
+                                    adminId:
+                                        chatData['admin_id']!, // Use admin_id from chatData
+                                    accessToken: accessToken,
+                                    role: 'user', // Pass role as 'user'
+                                  ),
+                              transitionsBuilder: (
+                                context,
+                                animation,
+                                secondaryAnimation,
+                                child,
+                              ) {
+                                const begin = Offset(1.0, 0.0);
+                                const end = Offset.zero;
+                                const curve = Curves.easeInOut;
+                                var tween = Tween(
+                                  begin: begin,
+                                  end: end,
+                                ).chain(CurveTween(curve: curve));
+                                var offsetAnimation = animation.drive(tween);
+                                return SlideTransition(
+                                  position: offsetAnimation,
+                                  child: child,
+                                );
+                              },
+                              transitionDuration: const Duration(
+                                milliseconds: 300,
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                    },
                   ),
                   _MenuItemData(
                     icon: Icons.settings,

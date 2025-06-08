@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/views/restaurants/restaurant_screen.dart';
 import 'package:frontend/views/settings/address_screen.dart' as address_screen;
+
+
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:frontend/views/settings/menu.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:frontend/views/settings/menu.dart';
-import 'package:frontend/views/settings/add_address.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -19,6 +17,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _userName = 'Guest';
+  String _userAddress = 'Loading address...';
   bool _isLoggedIn = false;
   final Set<String> _selectedCategories = {'ALL'};
   final List<dynamic> _shops = [];
@@ -44,6 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _scrollController.addListener(_onScroll);
     _checkLoginStatus();
     _fetchUserProfile();
+    _fetchUserAddress();
   }
 
   @override
@@ -83,9 +83,12 @@ class _HomeScreenState extends State<HomeScreen> {
     if (text.isEmpty) return text;
     return text
         .split('-')
-        .map((word) => word.isNotEmpty
-            ? '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}'
-            : '')
+        .map(
+          (word) =>
+              word.isNotEmpty
+                  ? '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}'
+                  : '',
+        )
         .join(' ');
   }
 
@@ -117,35 +120,41 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         print('Failed to fetch profile: Status ${response.statusCode}');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load profile: Status ${response.statusCode}')),
+          SnackBar(
+            content: Text(
+              'Failed to load profile: Status ${response.statusCode}',
+            ),
+          ),
         );
       }
     } catch (e) {
       print('Error fetching profile: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching profile: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error fetching profile: $e')));
     }
   }
 
   Future<List<String>> _fetchCategories() async {
     try {
       final response = await http.get(
-        Uri.parse(
-          'https://api.df.nguyenquangcuong.pro/restaurants/categories/',
-        ),
+
+        Uri.parse('https://api.df.nguyenquangcuong.pro/restaurants/categories/'),
       );
       print('Categories API Status: ${response.statusCode}');
       print('Categories API Response: ${response.body}');
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        final categories = (jsonData['data']['categories'] as List)
-            .map((category) => category['category_name'] as String)
-            .map((category) => capitalizeEachWord(category))
-            .toList();
+        final categories =
+            (jsonData['data']['categories'] as List)
+                .map((category) => category['category_name'] as String)
+                .map((category) => capitalizeEachWord(category))
+                .toList();
         return ['ALL', ...categories];
       } else {
-        throw Exception('Failed to load categories: Status ${response.statusCode}');
+        throw Exception(
+          'Failed to load categories: Status ${response.statusCode}',
+        );
       }
     } catch (e) {
       print('Error fetching categories: $e');
@@ -165,10 +174,10 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final categoryQuery = _selectedCategories.isNotEmpty &&
-              !_selectedCategories.contains('ALL')
-          ? '&category=${_selectedCategories.map((category) => category.toLowerCase().replaceAll(' ', '-')).join(',')}'
-          : '';
+      final categoryQuery =
+          _selectedCategories.isNotEmpty && !_selectedCategories.contains('ALL')
+              ? '&category=${_selectedCategories.map((category) => category.toLowerCase().replaceAll(' ', '-')).join(',')}'
+              : '';
       final uri = Uri.parse(
         'https://api.df.nguyenquangcuong.pro/restaurants?page=$_page&limit=10$categoryQuery&latitude=21.0278&longitude=105.8342',
       );
@@ -186,8 +195,6 @@ class _HomeScreenState extends State<HomeScreen> {
           throw Exception(
             'Invalid API response: "data" or "data.data" field is missing',
           );
-          throw Exception('Invalid API response: "data" or "data.data" field is missing');
-        }
 
         List<dynamic> shopsList = jsonData['data']['data'];
         print('Extracted shop data: $shopsList');
@@ -209,7 +216,9 @@ class _HomeScreenState extends State<HomeScreen> {
           });
           if (_shops.isEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('No restaurants found for selected categories')),
+              SnackBar(
+                content: Text('No restaurants found for selected categories'),
+              ),
             );
           }
         }
@@ -219,7 +228,11 @@ class _HomeScreenState extends State<HomeScreen> {
           _isLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load restaurants: Status ${response.statusCode}')),
+          SnackBar(
+            content: Text(
+              'Failed to load restaurants: Status ${response.statusCode}',
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -230,9 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to load restaurants: $e')));
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load restaurants: $e')),
-      );
+
     }
   }
 
@@ -304,37 +315,18 @@ class _HomeScreenState extends State<HomeScreen> {
                         );
                       }
                       if (_isLoading && _shops.isNotEmpty) {
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        if (index < _shops.length) {
-                          final shop = _shops[index];
-                          print('Rendering shop: ${shop['name']} with ID: ${shop['restaurant_id']}');
-                          return Padding(
-                            padding: EdgeInsets.only(bottom: screenHeight * 0.02),
-                            child: _buildRestaurantCard(
-                              screenWidth,
-                              screenHeight,
-                              shop['name'] ?? 'Unknown',
-                              shop['shop_image_url'] ?? '',
-                              shop,
-                            ),
-                          );
-                        }
-                        if (_isLoading && _shops.isNotEmpty) {
-                          return const SizedBox.shrink();
-                        }
-                        if (!_hasMore && _shops.isEmpty) {
-                          return const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(16.0),
-                              child: Text('No restaurants found'),
-                            ),
-                          );
-                        }
                         return const SizedBox.shrink();
-                      },
-                      childCount: _shops.length + (_hasMore ? 1 : 0),
-                    ),
+                      }
+                      if (!_hasMore && _shops.isEmpty) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Text('No restaurants found'),
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    }, childCount: _shops.length + (_hasMore ? 1 : 0)),
                   ),
                 ],
               ),
@@ -423,12 +415,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     Navigator.pushNamed(context, '/location');
                   } else {
                     Navigator.push(
-                Navigator.push(
-                  context,
-                  PageRouteBuilder(
-                    pageBuilder: (context, animation, secondaryAnimation) =>
-                        const AddAddressScreen(),
-                    transitionsBuilder: (
                       context,
                       PageRouteBuilder(
                         pageBuilder:
@@ -469,10 +455,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   }
                 }
               },
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'DELIVER TO',
                     style: TextStyle(
                       fontSize: 12,
@@ -496,6 +482,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
+
                       Text(
                         'Halal Lab office',
                         style: TextStyle(
@@ -505,7 +492,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: _textColor,
                         ),
                       ),
-                      Icon(Icons.arrow_drop_down),
+                      const Icon(Icons.arrow_drop_down),
                     ],
                   ),
                 ],
@@ -521,6 +508,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.pushNamed(context, '/login').then((_) {
                     _checkLoginStatus();
                     _fetchUserProfile();
+                    _fetchUserAddress();
                   });
                 },
                 child: const Text(
@@ -577,7 +565,8 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.push(
           context,
           PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => const Menu(),
+            pageBuilder:
+                (context, animation, secondaryAnimation) => const Menu(),
             transitionsBuilder: (
               context,
               animation,
@@ -670,7 +659,11 @@ class _HomeScreenState extends State<HomeScreen> {
             if (snapshot.hasError) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to load categories: ${snapshot.error}')),
+                  SnackBar(
+                    content: Text(
+                      'Failed to load categories: ${snapshot.error}',
+                    ),
+                  ),
                 );
               });
               return const Center(child: Text('Failed to load categories'));
@@ -684,16 +677,17 @@ class _HomeScreenState extends State<HomeScreen> {
             return SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: categories.map<Widget>((category) {
-                  return Padding(
-                    padding: EdgeInsets.only(right: screenWidth * 0.02),
-                    child: _buildCategoryChip(
-                      category,
-                      screenWidth,
-                      screenHeight,
-                    ),
-                  );
-                }).toList(),
+                children:
+                    categories.map<Widget>((category) {
+                      return Padding(
+                        padding: EdgeInsets.only(right: screenWidth * 0.02),
+                        child: _buildCategoryChip(
+                          category,
+                          screenWidth,
+                          screenHeight,
+                        ),
+                      );
+                    }).toList(),
               ),
             );
           },
@@ -849,39 +843,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               }
               : null,
-      onTap: restaurantId != null
-          ? () {
-              Navigator.push(
-                context,
-                PageRouteBuilder(
-                  pageBuilder: (context, animation, secondaryAnimation) =>
-                      RestaurantScreen(restaurantId: restaurantId),
-                  transitionsBuilder: (
-                    context,
-                    animation,
-                    secondaryAnimation,
-                    child,
-                  ) {
-                    const begin = Offset(1.0, 0.0);
-                    const end = Offset.zero;
-                    const curve = Curves.easeInOut;
-
-                    var tween = Tween(
-                      begin: begin,
-                      end: end,
-                    ).chain(CurveTween(curve: curve));
-                    var offsetAnimation = animation.drive(tween);
-
-                    return SlideTransition(
-                      position: offsetAnimation,
-                      child: child,
-                    );
-                  },
-                  transitionDuration: const Duration(milliseconds: 300),
-                ),
-              );
-            }
-          : null,
       child: Card(
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -896,10 +857,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   top: Radius.circular(10),
                 ),
                 image: DecorationImage(
-                  image: shopImage.isNotEmpty
-                      ? NetworkImage(shopImage)
-                      : const AssetImage('assets/images/default_shop.png')
-                          as ImageProvider,
+                  image:
+                      shopImage.isNotEmpty
+                          ? NetworkImage(shopImage)
+                          : const AssetImage('assets/images/default_shop.png')
+                              as ImageProvider,
                   fit: BoxFit.cover,
                 ),
               ),
@@ -919,7 +881,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   SizedBox(height: screenHeight * 0.005),
                   Text(
-                    'Beverages • Snacks', // Có thể thay bằng category từ API nếu cần
+                    'Beverages • Snacks',
                     style: TextStyle(
                       fontSize: screenWidth * 0.035,
                       color: Colors.grey[600],
@@ -930,31 +892,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     screenWidth,
                     shop['rating']?.toString() ?? '0.0',
                   ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRestaurantInfoRow(double screenWidth, String rating) {
-    return Row(
-      children: [
-        _buildInfoItem(Icons.star, rating, screenWidth, color: Colors.orange),
-        _buildInfoItem(Icons.local_shipping, 'Free', screenWidth),
-        _buildInfoItem(
-          Icons.timer,
-          '20 min',
-          screenWidth,
-          color: Colors.orange,
-        ),
-      ],
-    );
-  }
-
-                  _buildRestaurantInfoRow(screenWidth, shop['rating']?.toString() ?? '0.0'),
                 ],
               ),
             ),

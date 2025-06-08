@@ -183,7 +183,7 @@ class CartManager {
       };
 
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:3000/cart'),
+        Uri.parse('https://api.df.nguyenquangcuong.pro/cart'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $_authToken',
@@ -210,6 +210,7 @@ class CartManager {
     }
   }
 
+  
   Future<bool> updateCartItem({
     required String restaurantId,
     required String itemId,
@@ -262,7 +263,7 @@ class CartManager {
       };
 
       final response = await http.patch(
-        Uri.parse('http://10.0.2.2:3000/cart/item'),
+        Uri.parse('https://api.df.nguyenquangcuong.pro/cart/item'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $_authToken',
@@ -288,43 +289,46 @@ class CartManager {
   }
 
   Future<bool> clearCart(String restaurantId) async {
-    try {
-      _carts.remove(restaurantId);
-      if (_currentRestaurantId == restaurantId) {
-        _currentRestaurantId = null;
-      }
-      await _saveCartToPrefs();
-
-      if (_authToken == null) {
-        print('No auth token found');
-        return false;
-      }
-
-      final response = await http.delete(
-        Uri.parse('http://10.0.2.2:3000/cart?restaurant_id=$restaurantId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_authToken',
-        },
-      ).timeout(const Duration(seconds: 10));
-
-      print('Clear Cart API Status: ${response.statusCode}');
-      print('Clear Cart API Response: ${response.body}');
-
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        return true;
-      } else {
-        print('Failed to clear cart: ${response.statusCode}');
-        await _loadCartFromPrefs();
-        return false;
-      }
-    } catch (e) {
-      print('Error clearing cart: $e');
-      await _loadCartFromPrefs();
+  try {
+    if (_authToken == null) {
+      print('No auth token found');
       return false;
     }
-  }
 
+    final response = await http.delete(
+      Uri.parse('https://api.df.nguyenquangcuong.pro/cart/items'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $_authToken',
+      },
+      body: jsonEncode({'restaurantId': restaurantId}),
+    ).timeout(const Duration(seconds: 10));
+
+    print('Clear Cart API Status: ${response.statusCode}');
+    print('Clear Cart API Response: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final responseData = jsonDecode(response.body);
+      if (responseData['statusCode'] == 200) {
+        _carts.remove(restaurantId);
+        if (_currentRestaurantId == restaurantId) {
+          _currentRestaurantId = null;
+        }
+        await _saveCartToPrefs();
+        return true;
+      }
+    }
+
+    print('Failed to clear cart: ${response.statusCode}');
+    await _loadCartFromPrefs();
+    return false;
+  } catch (e) {
+    print('Error clearing cart: $e');
+    await _loadCartFromPrefs();
+    return false;
+  }
+}
+  
   bool _areCustomizationsEqual(
       List<Map<String, String>> c1, List<Map<String, String>> c2) {
     if (c1.length != c2.length) return false;
