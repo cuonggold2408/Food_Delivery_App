@@ -64,7 +64,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
 
       final response = await http.put(
-        Uri.parse('http://10.0.2.2:3000/user/profile'),
+        Uri.parse('https://api.df.nguyenquangcuong.pro/user/profile'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',

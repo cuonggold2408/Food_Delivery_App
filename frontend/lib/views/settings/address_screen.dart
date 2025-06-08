@@ -80,7 +80,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
     }
 
     final response = await http.get(
-      Uri.parse('http://10.0.2.2:3000/user/address'),
+      Uri.parse('https://api.df.nguyenquangcuong.pro/user/address'),
       headers: {'Authorization': 'Bearer $token'},
     );
     print(response.body);
@@ -102,7 +102,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
     }
 
     final response = await http.delete(
-      Uri.parse('http://10.0.2.2:3000/user/address/$addressId'),
+      Uri.parse('https://api.df.nguyenquangcuong.pro/user/address/$addressId'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
@@ -120,12 +120,8 @@ class _AddressesScreenState extends State<AddressesScreen> {
       await prefs.setString('user_latitude', address.latitude);
       await prefs.setString('user_longitude', address.longitude);
 
-      // Chuyển hướng về HomeScreen
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        '/home',
-        (route) => false, // Xóa tất cả các màn hình trước đó
-      );
+      // Chuyển hướng về trang trước đó
+      Navigator.pop(context, address);
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -238,7 +234,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                   Text(address.label), // Sử dụng label thay vì hardcode 'Home'
                   const SizedBox(height: 4.0),
                   Text(
-                    '${address.addressName}',
+                    address.addressName,
                     style: textTheme.bodyMedium?.copyWith(color: Colors.grey),
                   ),
                 ],

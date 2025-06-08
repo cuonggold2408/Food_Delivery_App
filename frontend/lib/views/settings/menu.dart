@@ -1,14 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:frontend/chat/messenger_screen.dart';
+import 'package:frontend/views/order/order_status_screen.dart';
 import 'package:frontend/views/settings/profile_screen.dart';
-import 'package:frontend/views/settings/address_screen.dart'; // Import màn hình Addresses
+import 'package:frontend/views/settings/address_screen.dart';
 import 'package:frontend/conponents/custom_snack_bar.dart';
 import 'package:frontend/conponents/top_snack_bar.dart';
 import 'package:frontend/services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart'; // Import ApiService
 
-// Các hằng số cho màu sắc, kích thước và khoảng cách
 const double _avatarRadius = 40.0;
 const double _spacing = 16.0;
 
@@ -20,12 +21,13 @@ class Menu extends StatefulWidget {
 }
 
 class _MenuState extends State<Menu> {
-  String _userName = 'Guest'; // Tên người dùng mặc định
+  String _userName = 'Guest';
+  int? _userId; // Store userId from profile
 
   @override
   void initState() {
     super.initState();
-    _fetchUserProfile(); // Gọi API để lấy thông tin người dùng khi khởi tạo
+    _fetchUserProfile();
   }
 
   Future<String?> _getAccessToken() async {
@@ -42,7 +44,7 @@ class _MenuState extends State<Menu> {
       }
 
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:3000/user/profile'),
+        Uri.parse('https://api.df.nguyenquangcuong.pro/user/profile'),
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
@@ -55,24 +57,76 @@ class _MenuState extends State<Menu> {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         final userName = jsonData['data']['name'] ?? 'Guest';
+        final userId =
+            jsonData['data']['id']; // Assuming 'id' is the user ID field
         setState(() {
           _userName = userName;
+          _userId = userId; // Store userId
         });
       } else {
         print('Failed to fetch profile: Status ${response.statusCode}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Failed to load profile: Status ${response.statusCode}',
-            ),
+        showTopSnackBar(
+          Overlay.of(context),
+          CustomSnackBar.error(
+            message: 'Failed to load profile: Status ${response.statusCode}',
           ),
         );
       }
     } catch (e) {
       print('Error fetching profile: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error fetching profile: $e')));
+      showTopSnackBar(
+        Overlay.of(context),
+        CustomSnackBar.error(message: 'Error fetching profile: $e'),
+      );
+    }
+  }
+
+  // Function to create a chat and retrieve chat ID, user ID, and admin ID
+  Future<Map<String, int>?> _getOrCreateChatId(String accessToken) async {
+    try {
+      final response = await http.post(
+        Uri.parse('https://api.df.nguyenquangcuong.pro/chat'),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'subject': 'New Chat',
+          'initial_message': 'Hello, I need assistance.',
+        }),
+      );
+
+      print('Chat API Status: ${response.statusCode}');
+      print('Chat API Response: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final jsonData = json.decode(response.body);
+        final chatId = jsonData['data']['chat_id'];
+        final userId = jsonData['data']['user_id'];
+        final adminId =
+            jsonData['data']['admin_id']; // Extract admin_id from new response
+        return {
+          'chat_id': chatId,
+          'user_id': userId,
+          'admin_id': adminId, // Include admin_id in the returned map
+        };
+      } else {
+        print('Failed to create chat: Status ${response.statusCode}');
+        showTopSnackBar(
+          Overlay.of(context),
+          CustomSnackBar.error(
+            message: 'Failed to create chat: Status ${response.statusCode}',
+          ),
+        );
+        return null;
+      }
+    } catch (e) {
+      print('Error creating chat: $e');
+      showTopSnackBar(
+        Overlay.of(context),
+        CustomSnackBar.error(message: 'Error creating chat: $e'),
+      );
+      return null;
     }
   }
 
@@ -100,9 +154,7 @@ class _MenuState extends State<Menu> {
         actions: [
           IconButton(
             icon: const Icon(Icons.more_vert, color: Colors.black),
-            onPressed: () {
-              // Logic cho nút menu (nếu cần)
-            },
+            onPressed: () {},
           ),
         ],
       ),
@@ -114,10 +166,8 @@ class _MenuState extends State<Menu> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Phần Avatar và thông tin người dùng
               _buildUserInfoSection(textTheme),
               const SizedBox(height: _spacing * 2),
-              // Nhóm 1: Personal Info, Addresses
               _buildGroupedMenuItems(
                 items: [
                   _MenuItemData(
@@ -126,7 +176,6 @@ class _MenuState extends State<Menu> {
                     onTap: () async {
                       final accessToken = await _getAccessToken();
                       if (accessToken == null) {
-                        // Chưa đăng nhập: Hiển thị popup yêu cầu đăng nhập
                         showDialog(
                           context: context,
                           builder:
@@ -158,7 +207,6 @@ class _MenuState extends State<Menu> {
                               ),
                         );
                       } else {
-                        // Đã đăng nhập: Điều hướng đến ProfileScreen
                         Navigator.push(
                           context,
                           PageRouteBuilder(
@@ -198,7 +246,6 @@ class _MenuState extends State<Menu> {
                     onTap: () async {
                       final accessToken = await _getAccessToken();
                       if (accessToken == null) {
-                        // Chưa đăng nhập: Hiển thị popup yêu cầu đăng nhập
                         showDialog(
                           context: context,
                           builder:
@@ -230,8 +277,7 @@ class _MenuState extends State<Menu> {
                               ),
                         );
                       } else {
-                        // Đã đăng nhập: Điều hướng đến AddressesScreen
-                        Navigator.push(
+                        final result = await Navigator.push(
                           context,
                           PageRouteBuilder(
                             pageBuilder:
@@ -261,19 +307,50 @@ class _MenuState extends State<Menu> {
                             ),
                           ),
                         );
+                        if (result != null) {
+                          Navigator.pop(context, result);
+                        }
                       }
                     },
                   ),
                 ],
               ),
               const SizedBox(height: _spacing),
-              // Nhóm 2: Cart, Favourite, Notifications, Payment Method
               _buildGroupedMenuItems(
                 items: [
                   _MenuItemData(
                     icon: Icons.shopping_cart,
-                    title: 'Cart',
-                    onTap: () {},
+                    title: 'Orders',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        PageRouteBuilder(
+                          pageBuilder:
+                              (context, animation, secondaryAnimation) =>
+                                  const OrderStatusScreen(),
+                          transitionsBuilder: (
+                            context,
+                            animation,
+                            secondaryAnimation,
+                            child,
+                          ) {
+                            const begin = Offset(1.0, 0.0);
+                            const end = Offset.zero;
+                            const curve = Curves.easeInOut;
+                            var tween = Tween(
+                              begin: begin,
+                              end: end,
+                            ).chain(CurveTween(curve: curve));
+                            var offsetAnimation = animation.drive(tween);
+                            return SlideTransition(
+                              position: offsetAnimation,
+                              child: child,
+                            );
+                          },
+                          transitionDuration: const Duration(milliseconds: 300),
+                        ),
+                      );
+                    },
                   ),
                   _MenuItemData(
                     icon: Icons.favorite,
@@ -293,7 +370,6 @@ class _MenuState extends State<Menu> {
                 ],
               ),
               const SizedBox(height: _spacing),
-              // Nhóm 3: FAQs, User Reviews, Settings
               _buildGroupedMenuItems(
                 items: [
                   _MenuItemData(
@@ -308,6 +384,93 @@ class _MenuState extends State<Menu> {
                     onTap: () {},
                   ),
                   _MenuItemData(
+                    icon: Icons.message,
+                    title: 'Message Admin',
+                    iconColor: Colors.blue,
+                    onTap: () async {
+                      final accessToken = await _getAccessToken();
+                      if (accessToken == null) {
+                        showDialog(
+                          context: context,
+                          builder:
+                              (context) => AlertDialog(
+                                title: const Text('Yêu cầu đăng nhập'),
+                                content: const Text(
+                                  'Vui lòng đăng nhập để nhắn tin với admin.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Hủy'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      Navigator.pushNamed(context, '/login');
+                                    },
+                                    child: const Text('Đăng nhập'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      Navigator.pushNamed(context, '/register');
+                                    },
+                                    child: const Text('Đăng ký'),
+                                  ),
+                                ],
+                              ),
+                        );
+                      } else {
+                        final chatData = await _getOrCreateChatId(accessToken);
+                        if (chatData != null) {
+                          setState(() {
+                            _userId = chatData['user_id'];
+                          });
+                          Navigator.push(
+                            context,
+                            PageRouteBuilder(
+                              pageBuilder:
+                                  (
+                                    context,
+                                    animation,
+                                    secondaryAnimation,
+                                  ) => ChatDetailScreen(
+                                    userId: chatData['user_id']!,
+                                    chatId: chatData['chat_id']!,
+                                    adminId:
+                                        chatData['admin_id']!, // Use admin_id from chatData
+                                    accessToken: accessToken,
+                                    role: 'user', // Pass role as 'user'
+                                  ),
+                              transitionsBuilder: (
+                                context,
+                                animation,
+                                secondaryAnimation,
+                                child,
+                              ) {
+                                const begin = Offset(1.0, 0.0);
+                                const end = Offset.zero;
+                                const curve = Curves.easeInOut;
+                                var tween = Tween(
+                                  begin: begin,
+                                  end: end,
+                                ).chain(CurveTween(curve: curve));
+                                var offsetAnimation = animation.drive(tween);
+                                return SlideTransition(
+                                  position: offsetAnimation,
+                                  child: child,
+                                );
+                              },
+                              transitionDuration: const Duration(
+                                milliseconds: 300,
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                  _MenuItemData(
                     icon: Icons.settings,
                     title: 'Settings',
                     onTap: () {},
@@ -315,7 +478,6 @@ class _MenuState extends State<Menu> {
                 ],
               ),
               const SizedBox(height: _spacing),
-              // Nhóm 4: Log Out
               _buildGroupedMenuItems(
                 items: [
                   _MenuItemData(
@@ -324,9 +486,13 @@ class _MenuState extends State<Menu> {
                     iconColor: Colors.red,
                     textColor: Colors.red,
                     onTap: () async {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.remove('user_address');
+                      await prefs.remove('user_latitude');
+                      await prefs.remove('user_longitude');
                       await ApiService.logout();
                       showSuccessSnackbar('Đăng xuất thành công!');
-                      Navigator.pushReplacementNamed(context, '/home');
+                      Navigator.pushReplacementNamed(context, '/location');
                     },
                   ),
                 ],
@@ -338,21 +504,19 @@ class _MenuState extends State<Menu> {
     );
   }
 
-  // Widget hiển thị phần Avatar và thông tin người dùng
   Widget _buildUserInfoSection(TextTheme textTheme) {
     return Row(
       children: [
         CircleAvatar(
           radius: _avatarRadius,
           backgroundColor: Colors.orange[100],
-          // Có thể thêm ảnh: backgroundImage: NetworkImage('url_to_image'),
         ),
         const SizedBox(width: _spacing),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              _userName, // Hiển thị tên người dùng từ trạng thái
+              _userName,
               style: textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -367,7 +531,6 @@ class _MenuState extends State<Menu> {
     );
   }
 
-  // Widget hiển thị một nhóm các mục trong container
   Widget _buildGroupedMenuItems({required List<_MenuItemData> items}) {
     return Container(
       padding: const EdgeInsets.all(_spacing),
@@ -398,7 +561,6 @@ class _MenuState extends State<Menu> {
     );
   }
 
-  // Widget hiển thị một mục trong danh sách
   Widget _buildMenuItem({
     required IconData icon,
     required String title,
@@ -432,7 +594,6 @@ class _MenuState extends State<Menu> {
   }
 }
 
-// Class để lưu trữ dữ liệu của một mục trong danh sách
 class _MenuItemData {
   final IconData icon;
   final String title;

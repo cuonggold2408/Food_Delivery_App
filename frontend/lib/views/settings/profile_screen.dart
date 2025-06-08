@@ -27,7 +27,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     final response = await http.get(
-      Uri.parse('http://10.0.2.2:3000/user/profile'),
+      Uri.parse('https://api.df.nguyenquangcuong.pro/user/profile'),
       headers: {'Authorization': 'Bearer $token'},
     );
     print(response.body);
