@@ -106,7 +106,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     try {
       final response = await http.get(
         Uri.parse(
-          'http://10.0.2.2:3000/search?'
+          'https://api.df.nguyenquangcuong.pro/search?'
           'latitude=$_latitude&'
           'longitude=$_longitude&'
           'query=$query&'

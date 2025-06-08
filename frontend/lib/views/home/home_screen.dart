@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/views/restaurants/restaurant_screen.dart';
-import 'package:frontend/views/settings/address_screen.dart';
+import 'package:frontend/views/settings/address_screen.dart' as address_screen;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:frontend/views/settings/menu.dart';
@@ -99,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:3000/user/profile'),
+        Uri.parse('https://api.df.nguyenquangcuong.pro/user/profile'),
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
@@ -136,7 +136,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<List<String>> _fetchCategories() async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:3000/restaurants/categories/'),
+        Uri.parse(
+          'https://api.df.nguyenquangcuong.pro/restaurants/categories/',
+        ),
       );
       print('Categories API Status: ${response.statusCode}');
       print('Categories API Response: ${response.body}');
@@ -176,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ? '&category=${_selectedCategories.map((category) => category.toLowerCase().replaceAll(' ', '-')).join(',')}'
               : '';
       final uri = Uri.parse(
-        'http://10.0.2.2:3000/restaurants?page=$_page&limit=10$categoryQuery&latitude=21.0278&longitude=105.8342',
+        'https://api.df.nguyenquangcuong.pro/restaurants?page=$_page&limit=10$categoryQuery&latitude=21.0278&longitude=105.8342',
       );
       print('Fetching shops with URL: $uri');
       final response = await http.get(uri).timeout(Duration(seconds: 10));
@@ -371,7 +373,6 @@ class _HomeScreenState extends State<HomeScreen> {
             GestureDetector(
               onTap: () {
                 if (!_isLoggedIn) {
-                  // Hiển thị dialog yêu cầu đăng nhập
                   showDialog(
                     context: context,
                     builder:
@@ -408,7 +409,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                   );
                 } else {
-                  // Logic hiện tại cho người dùng đã đăng nhập
                   if (_userAddress == 'Unknown location' ||
                       _userAddress == 'Failed to load address') {
                     Navigator.pushNamed(context, '/location');
@@ -418,7 +418,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       PageRouteBuilder(
                         pageBuilder:
                             (context, animation, secondaryAnimation) =>
-                                const AddressesScreen(),
+                                const address_screen.AddressesScreen(),
                         transitionsBuilder: (
                           context,
                           animation,
@@ -440,7 +440,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                         transitionDuration: const Duration(milliseconds: 300),
                       ),
-                    );
+                    ).then((result) {
+                      if (result != null && result is address_screen.Address) {
+                        setState(() {
+                          _userAddress = result.addressName;
+                        });
+                        _shops.clear();
+                        _page = 1;
+                        _hasMore = true;
+                        _fetchShops();
+                      }
+                    });
                   }
                 }
               },
@@ -566,7 +576,17 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             transitionDuration: const Duration(milliseconds: 300),
           ),
-        );
+        ).then((result) {
+          if (result != null && result is address_screen.Address) {
+            setState(() {
+              _userAddress = result.addressName;
+            });
+            _shops.clear();
+            _page = 1;
+            _hasMore = true;
+            _fetchShops();
+          }
+        });
       },
       borderRadius: BorderRadius.circular(screenWidth * 0.06),
       child: ClipRRect(

@@ -47,13 +47,17 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     });
 
     try {
-      final response = await http.get(
-        Uri.parse(
-          'http://10.0.2.2:3000/restaurants/items/${widget.itemId}?restaurantId=${widget.restaurantId}',
-        ),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(
+            Uri.parse(
+              'https://api.df.nguyenquangcuong.pro/restaurants/items/${widget.itemId}?restaurantId=${widget.restaurantId}',
+            ),
+          )
+          .timeout(const Duration(seconds: 10));
 
-      print('Product API Status for ID ${widget.itemId}: ${response.statusCode}');
+      print(
+        'Product API Status for ID ${widget.itemId}: ${response.statusCode}',
+      );
       print('Product API Response: ${response.body}');
 
       if (response.statusCode == 200) {
@@ -71,7 +75,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           }
         });
       } else {
-        throw Exception('Không thể tải thông tin sản phẩm: Mã trạng thái ${response.statusCode}');
+        throw Exception(
+          'Không thể tải thông tin sản phẩm: Mã trạng thái ${response.statusCode}',
+        );
       }
     } catch (e) {
       print('Lỗi khi lấy thông tin sản phẩm với ID ${widget.itemId}: $e');
@@ -140,14 +146,16 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     };
 
     try {
-      final response = await http.post(
-        Uri.parse('http://10.0.2.2:3000/cart'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_authToken',
-        },
-        body: json.encode(body),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .post(
+            Uri.parse('https://api.df.nguyenquangcuong.pro/cart'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $_authToken',
+            },
+            body: json.encode(body),
+          )
+          .timeout(const Duration(seconds: 10));
 
       print('Cart API Status: ${response.statusCode}');
       print('Cart API Request Body: ${json.encode(body)}');
@@ -172,7 +180,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         // TODO: Chuyển hướng đến màn hình đăng nhập
         // Navigator.pushNamed(context, '/login');
       } else {
-        throw Exception('Không thể thêm vào giỏ hàng: Mã trạng thái ${response.statusCode}');
+        throw Exception(
+          'Không thể thêm vào giỏ hàng: Mã trạng thái ${response.statusCode}',
+        );
       }
     } catch (e) {
       print('Lỗi khi thêm vào giỏ hàng: $e');
@@ -201,12 +211,13 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           fit: BoxFit.cover,
           width: double.infinity,
           height: 200,
-          errorBuilder: (context, error, stackTrace) => Image.asset(
-            'assets/images/default_shop.png',
-            fit: BoxFit.cover,
-            width: double.infinity,
-            height: 200,
-          ),
+          errorBuilder:
+              (context, error, stackTrace) => Image.asset(
+                'assets/images/default_shop.png',
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: 200,
+              ),
         ),
       ),
     );
@@ -235,10 +246,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       children: [
         const Icon(Icons.star, color: Colors.amber, size: 20),
         const SizedBox(width: 4),
-        const Text(
-          'N/A',
-          style: TextStyle(fontSize: 16),
-        ),
+        const Text('N/A', style: TextStyle(fontSize: 16)),
         const SizedBox(width: 16),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -290,13 +298,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             GestureDetector(
-              onTap: _quantity > 1
-                  ? () {
-                      setState(() {
-                        _quantity--;
-                      });
-                    }
-                  : null,
+              onTap:
+                  _quantity > 1
+                      ? () {
+                        setState(() {
+                          _quantity--;
+                        });
+                      }
+                      : null,
               child: Container(
                 width: 40,
                 height: 40,
@@ -366,11 +375,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.add,
-                  color: Colors.orange,
-                  size: 20,
-                ),
+                child: const Icon(Icons.add, color: Colors.orange, size: 20),
               ),
             ),
           ],
@@ -380,7 +385,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   }
 
   Widget _buildOptionsSelector() {
-    if (_productData == null || _productData['options'] == null || _productData['options'].isEmpty) {
+    if (_productData == null ||
+        _productData['options'] == null ||
+        _productData['options'].isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -419,77 +426,95 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: dishes.map((dish) {
-                  String optionId = dish['option_id'];
-                  String optionName = dish['option_name'];
-                  String optionPrice = dish['option_price'];
-                  bool isSelected = _selectedOptions[categoryId]?.contains(optionId) ?? false;
+                children:
+                    dishes.map((dish) {
+                      String optionId = dish['option_id'];
+                      String optionName = dish['option_name'];
+                      String optionPrice = dish['option_price'];
+                      bool isSelected =
+                          _selectedOptions[categoryId]?.contains(optionId) ??
+                          false;
 
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        List<String> currentSelections = _selectedOptions[categoryId] ?? [];
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            List<String> currentSelections =
+                                _selectedOptions[categoryId] ?? [];
 
-                        if (isSelected) {
-                          if (currentSelections.length > minSelections) {
-                            currentSelections.remove(optionId);
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Phải chọn ít nhất $minSelections $categoryName'),
-                                duration: const Duration(seconds: 2),
-                              ),
-                            );
-                            return;
-                          }
-                        } else {
-                          if (currentSelections.length < maxSelections) {
-                            currentSelections.add(optionId);
-                          } else if (maxSelections == 1) {
-                            currentSelections = [optionId];
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Chỉ được chọn tối đa $maxSelections $categoryName'),
-                                duration: const Duration(seconds: 2),
-                              ),
-                            );
-                            return;
-                          }
-                        }
+                            if (isSelected) {
+                              if (currentSelections.length > minSelections) {
+                                currentSelections.remove(optionId);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Phải chọn ít nhất $minSelections $categoryName',
+                                    ),
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                                return;
+                              }
+                            } else {
+                              if (currentSelections.length < maxSelections) {
+                                currentSelections.add(optionId);
+                              } else if (maxSelections == 1) {
+                                currentSelections = [optionId];
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Chỉ được chọn tối đa $maxSelections $categoryName',
+                                    ),
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                                return;
+                              }
+                            }
 
-                        _selectedOptions[categoryId] = currentSelections;
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isSelected ? Colors.orange.withOpacity(0.1) : Colors.white,
-                        border: Border.all(
-                          color: isSelected ? Colors.orange : Colors.grey[400]!,
-                          width: 1.5,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.1),
-                            spreadRadius: 1,
-                            blurRadius: 3,
-                            offset: const Offset(0, 1),
+                            _selectedOptions[categoryId] = currentSelections;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
                           ),
-                        ],
-                      ),
-                      child: Text(
-                        '$optionName${optionPrice != '0.00' ? ' (+${_formatPrice(optionPrice)})' : ''}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: isSelected ? Colors.orange : Colors.black87,
+                          decoration: BoxDecoration(
+                            color:
+                                isSelected
+                                    ? Colors.orange.withOpacity(0.1)
+                                    : Colors.white,
+                            border: Border.all(
+                              color:
+                                  isSelected
+                                      ? Colors.orange
+                                      : Colors.grey[400]!,
+                              width: 1.5,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.1),
+                                spreadRadius: 1,
+                                blurRadius: 3,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            '$optionName${optionPrice != '0.00' ? ' (+${_formatPrice(optionPrice)})' : ''}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color:
+                                  isSelected ? Colors.orange : Colors.black87,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  );
-                }).toList(),
+                      );
+                    }).toList(),
               ),
               const SizedBox(height: 16),
             ],
@@ -534,11 +559,13 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           for (var option in _productData['options']) {
             String categoryId = option['option_category']['category_id'];
             String categoryName = option['option_category']['category_name'];
-            int minSelections = option['option_category']['category_min_selections'];
+            int minSelections =
+                option['option_category']['category_min_selections'];
             int currentSelections = _selectedOptions[categoryId]?.length ?? 0;
             if (currentSelections < minSelections) {
               canAddToCart = false;
-              errorMessage = 'Vui lòng chọn ít nhất $minSelections $categoryName';
+              errorMessage =
+                  'Vui lòng chọn ít nhất $minSelections $categoryName';
               break;
             }
           }
@@ -585,51 +612,52 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           Expanded(
             child: Container(
               color: Colors.white,
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _errorMessage != null
+              child:
+                  _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _errorMessage != null
                       ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(_errorMessage!),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: _fetchProductData,
+                              child: const Text('Thử lại'),
+                            ),
+                          ],
+                        ),
+                      )
+                      : SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: EdgeInsets.only(
+                          bottom: MediaQuery.of(context).padding.bottom + 80,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(_errorMessage!),
+                              _buildProductImage(),
                               const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: _fetchProductData,
-                                child: const Text('Thử lại'),
-                              ),
+                              _buildStoreHeader(),
+                              const SizedBox(height: 8),
+                              _buildProductTitle(),
+                              const SizedBox(height: 16),
+                              _buildRatingRow(),
+                              const SizedBox(height: 16),
+                              _buildDeliveryInfo(),
+                              const SizedBox(height: 24),
+                              _buildOptionsSelector(),
+                              const SizedBox(height: 24),
+                              _buildQuantitySelector(),
+                              const SizedBox(height: 24),
+                              _buildIngredientsSection(),
                             ],
                           ),
-                        )
-                      : SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          padding: EdgeInsets.only(
-                            bottom: MediaQuery.of(context).padding.bottom + 80,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildProductImage(),
-                                const SizedBox(height: 16),
-                                _buildStoreHeader(),
-                                const SizedBox(height: 8),
-                                _buildProductTitle(),
-                                const SizedBox(height: 16),
-                                _buildRatingRow(),
-                                const SizedBox(height: 16),
-                                _buildDeliveryInfo(),
-                                const SizedBox(height: 24),
-                                _buildOptionsSelector(),
-                                const SizedBox(height: 24),
-                                _buildQuantitySelector(),
-                                const SizedBox(height: 24),
-                                _buildIngredientsSection(),
-                              ],
-                            ),
-                          ),
                         ),
+                      ),
             ),
           ),
           Container(
@@ -645,10 +673,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 ),
               ],
             ),
-            child: SafeArea(
-              top: false,
-              child: _buildPriceAndAddButton(),
-            ),
+            child: SafeArea(top: false, child: _buildPriceAndAddButton()),
           ),
         ],
       ),
