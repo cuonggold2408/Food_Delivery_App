@@ -29,11 +29,11 @@ export class ChatService {
       throw new NotFoundException('Chat không tồn tại');
     }
 
-    if (chat.user_id !== userId) {
-      throw new ForbiddenException(
-        'Bạn không có quyền gửi tin nhắn trong chat này',
-      );
-    }
+    // if (chat.user_id !== userId) {
+    //   throw new ForbiddenException(
+    //     'Bạn không có quyền gửi tin nhắn trong chat này',
+    //   );
+    // }
 
     return this.chatRepository.sendMessage(data, userId, SenderType.USER);
   }
