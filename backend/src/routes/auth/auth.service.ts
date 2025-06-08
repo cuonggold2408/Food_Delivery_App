@@ -159,15 +159,20 @@ export class AuthService {
     const tokens = await this.generateTokens({
       user_id: user.user_id,
       provider_name: body.provider_name,
+      user_role: user.user_role,
     });
 
     return tokens;
   }
 
-  async generateTokens({ user_id, provider_name }: AccessTokenPayloadCreate) {
+  async generateTokens({
+    user_id,
+    provider_name,
+    user_role,
+  }: AccessTokenPayloadCreate) {
     const [accessToken, refreshToken] = await Promise.all([
-      this.tokenService.signAccessToken({ user_id, provider_name }),
-      this.tokenService.signRefreshToken({ user_id }),
+      this.tokenService.signAccessToken({ user_id, provider_name, user_role }),
+      this.tokenService.signRefreshToken({ user_id, user_role }),
     ]);
 
     const decodedRefreshToken =
@@ -185,7 +190,7 @@ export class AuthService {
 
   async refreshToken({ refresh_token }: RefreshTokenBodyType) {
     // 1. Kiểm tra refresh token có hợp lệ hay không
-    const { user_id } =
+    const { user_id, user_role } =
       await this.tokenService.verifyRefreshToken(refresh_token);
 
     // 2. Kiểm tra refresh token có tồn tại trong cơ sở dữ liệu hay không
@@ -207,6 +212,7 @@ export class AuthService {
       return await this.generateTokens({
         user_id,
         provider_name: refreshTokenInDB.provider_name,
+        user_role,
       });
     } catch {
       throw new UnauthorizedException('Refresh token không hợp lệ');
