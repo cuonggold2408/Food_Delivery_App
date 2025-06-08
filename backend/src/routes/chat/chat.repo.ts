@@ -39,6 +39,7 @@ export class ChatRepository {
       user_id: userId,
       subject: data.subject,
       status: ChatStatus.PENDING,
+      admin_id: 1,
       last_message_at: new Date(),
     });
 
