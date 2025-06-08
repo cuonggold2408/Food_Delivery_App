@@ -14,6 +14,7 @@ import {
   ApiOperation,
   ApiBearerAuth,
   ApiResponse,
+  ApiBody,
 } from '@nestjs/swagger';
 import { ChatService } from './chat.service';
 import { CreateChatDTO, SendMessageDTO, GetChatsQueryDTO } from './chat.dto';
@@ -97,6 +98,7 @@ export class ChatController {
     description: 'Admin gửi tin nhắn phản hồi user trong chat',
   })
   @ApiResponse({ status: 201, description: 'Tin nhắn được gửi thành công' })
+  @ApiBody({ type: SendMessageDTO, description: 'Tin nhắn phản hồi' })
   async adminReply(
     @Param('id', ParseIntPipe) chatId: number,
     @Body() body: Omit<SendMessageDTO, 'chat_id'>,
