@@ -127,4 +127,13 @@ export class OrderRepository {
       time_out: new Date(Date.now() + 1000 * 60 * 10),
     };
   }
+
+  async getUserOrders(userId: number) {
+    const orders = await this.orderRepository.find({
+      where: {
+        user: { user_id: userId },
+      },
+    });
+    return orders;
+  }
 }
