@@ -27,15 +27,15 @@ class _DraftPageState extends State<DraftPage> {
   Future<List<dynamic>> _fetchCartItems() async {
     try {
       final accessToken = await _getAccessToken();
-      final headers = {
-        'Content-Type': 'application/json',
-      };
+      final headers = {'Content-Type': 'application/json'};
       if (accessToken != null) {
         headers['Authorization'] = 'Bearer $accessToken';
       }
 
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:3000/cart/all'),
+
+        Uri.parse('https://api.df.nguyenquangcuong.pro/cart'),
+
         headers: headers,
       );
 
@@ -44,7 +44,9 @@ class _DraftPageState extends State<DraftPage> {
         if (jsonData['data'] != null && jsonData['data'] is List) {
           return jsonData['data'];
         } else {
-          throw Exception('Invalid API response: "data" field is missing or not a list');
+          throw Exception(
+            'Invalid API response: "data" field is missing or not a list',
+          );
         }
       } else {
         throw Exception('Failed to load cart: Status ${response.statusCode}');
@@ -60,12 +62,7 @@ class _DraftPageState extends State<DraftPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Đơn nháp'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {},
-          ),
-        ],
+        actions: [IconButton(icon: const Icon(Icons.search), onPressed: () {})],
       ),
       body: Column(
         children: [
@@ -75,10 +72,7 @@ class _DraftPageState extends State<DraftPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Xóa tất cả'),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text('Đặt lại'),
-                ),
+                TextButton(onPressed: () {}, child: const Text('Đặt lại')),
               ],
             ),
           ),
@@ -104,26 +98,40 @@ class _DraftPageState extends State<DraftPage> {
                   itemBuilder: (context, index) {
                     final item = items[index];
                     return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                      margin: const EdgeInsets.symmetric(
+                        vertical: 8.0,
+                        horizontal: 16.0,
+                      ),
                       child: ListTile(
                         leading: Image.network(
-                          item['shop_image_url'] ?? 'https://via.placeholder.com/100x100',
+                          item['shop_image_url'] ??
+                              'https://via.placeholder.com/100x100',
                           width: 100,
                           height: 100,
-                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.error),
+                          errorBuilder:
+                              (context, error, stackTrace) =>
+                                  const Icon(Icons.error),
                         ),
                         title: Text(item['name'] ?? 'Unknown'),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (item['city']?.isNotEmpty ?? false) Text(item['city']!),
-                            if (item['total_item'] != null && item['total_pay'] != null)
-                              Text('${item['total_pay'].toString()}đ (${item['total_item']} món)'),
+                            if (item['city']?.isNotEmpty ?? false)
+                              Text(item['city']!),
+                            if (item['total_item'] != null &&
+                                item['total_pay'] != null)
+                              Text(
+                                '${item['total_pay'].toString()}đ (${item['total_item']} món)',
+                              ),
                           ],
                         ),
                         onTap: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Tapped on ${item['name'] ?? 'Unknown'}')),
+                            SnackBar(
+                              content: Text(
+                                'Tapped on ${item['name'] ?? 'Unknown'}',
+                              ),
+                            ),
                           );
                         },
                       ),

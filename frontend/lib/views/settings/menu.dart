@@ -1,14 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:frontend/views/settings/profile_screen.dart';
-import 'package:frontend/views/settings/address_screen.dart'; // Import màn hình Addresses
+import 'package:frontend/views/settings/address_screen.dart';
 import 'package:frontend/conponents/custom_snack_bar.dart';
 import 'package:frontend/conponents/top_snack_bar.dart';
 import 'package:frontend/services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart'; // Import ApiService
 
-// Các hằng số cho màu sắc, kích thước và khoảng cách
 const double _avatarRadius = 40.0;
 const double _spacing = 16.0;
 
@@ -20,12 +19,12 @@ class Menu extends StatefulWidget {
 }
 
 class _MenuState extends State<Menu> {
-  String _userName = 'Guest'; // Tên người dùng mặc định
+  String _userName = 'Guest';
 
   @override
   void initState() {
     super.initState();
-    _fetchUserProfile(); // Gọi API để lấy thông tin người dùng khi khởi tạo
+    _fetchUserProfile();
   }
 
   Future<String?> _getAccessToken() async {
@@ -42,7 +41,7 @@ class _MenuState extends State<Menu> {
       }
 
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:3000/user/profile'),
+        Uri.parse('https://api.df.nguyenquangcuong.pro/user/profile'),
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
@@ -100,9 +99,7 @@ class _MenuState extends State<Menu> {
         actions: [
           IconButton(
             icon: const Icon(Icons.more_vert, color: Colors.black),
-            onPressed: () {
-              // Logic cho nút menu (nếu cần)
-            },
+            onPressed: () {},
           ),
         ],
       ),
@@ -114,10 +111,8 @@ class _MenuState extends State<Menu> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Phần Avatar và thông tin người dùng
               _buildUserInfoSection(textTheme),
               const SizedBox(height: _spacing * 2),
-              // Nhóm 1: Personal Info, Addresses
               _buildGroupedMenuItems(
                 items: [
                   _MenuItemData(
@@ -126,7 +121,6 @@ class _MenuState extends State<Menu> {
                     onTap: () async {
                       final accessToken = await _getAccessToken();
                       if (accessToken == null) {
-                        // Chưa đăng nhập: Hiển thị popup yêu cầu đăng nhập
                         showDialog(
                           context: context,
                           builder:
@@ -158,7 +152,6 @@ class _MenuState extends State<Menu> {
                               ),
                         );
                       } else {
-                        // Đã đăng nhập: Điều hướng đến ProfileScreen
                         Navigator.push(
                           context,
                           PageRouteBuilder(
@@ -198,7 +191,6 @@ class _MenuState extends State<Menu> {
                     onTap: () async {
                       final accessToken = await _getAccessToken();
                       if (accessToken == null) {
-                        // Chưa đăng nhập: Hiển thị popup yêu cầu đăng nhập
                         showDialog(
                           context: context,
                           builder:
@@ -230,8 +222,7 @@ class _MenuState extends State<Menu> {
                               ),
                         );
                       } else {
-                        // Đã đăng nhập: Điều hướng đến AddressesScreen
-                        Navigator.push(
+                        final result = await Navigator.push(
                           context,
                           PageRouteBuilder(
                             pageBuilder:
@@ -261,13 +252,16 @@ class _MenuState extends State<Menu> {
                             ),
                           ),
                         );
+                        // Trả về kết quả (địa chỉ được chọn) cho HomeScreen
+                        if (result != null) {
+                          Navigator.pop(context, result);
+                        }
                       }
                     },
                   ),
                 ],
               ),
               const SizedBox(height: _spacing),
-              // Nhóm 2: Cart, Favourite, Notifications, Payment Method
               _buildGroupedMenuItems(
                 items: [
                   _MenuItemData(
@@ -293,7 +287,6 @@ class _MenuState extends State<Menu> {
                 ],
               ),
               const SizedBox(height: _spacing),
-              // Nhóm 3: FAQs, User Reviews, Settings
               _buildGroupedMenuItems(
                 items: [
                   _MenuItemData(
@@ -315,29 +308,20 @@ class _MenuState extends State<Menu> {
                 ],
               ),
               const SizedBox(height: _spacing),
-              // Nhóm 4: Log Out
               _buildGroupedMenuItems(
                 items: [
-                  // Trong _buildGroupedMenuItems, mục Log Out
                   _MenuItemData(
                     icon: Icons.logout,
                     title: 'Log Out',
                     iconColor: Colors.red,
                     textColor: Colors.red,
                     onTap: () async {
-                      // Xóa thông tin vị trí
                       final prefs = await SharedPreferences.getInstance();
                       await prefs.remove('user_address');
                       await prefs.remove('user_latitude');
                       await prefs.remove('user_longitude');
-
-                      // Gọi API đăng xuất
                       await ApiService.logout();
-
-                      // Hiển thị thông báo đăng xuất thành công
                       showSuccessSnackbar('Đăng xuất thành công!');
-
-                      // Chuyển hướng đến màn hình yêu cầu vị trí
                       Navigator.pushReplacementNamed(context, '/location');
                     },
                   ),
@@ -350,21 +334,19 @@ class _MenuState extends State<Menu> {
     );
   }
 
-  // Widget hiển thị phần Avatar và thông tin người dùng
   Widget _buildUserInfoSection(TextTheme textTheme) {
     return Row(
       children: [
         CircleAvatar(
           radius: _avatarRadius,
           backgroundColor: Colors.orange[100],
-          // Có thể thêm ảnh: backgroundImage: NetworkImage('url_to_image'),
         ),
         const SizedBox(width: _spacing),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              _userName, // Hiển thị tên người dùng từ trạng thái
+              _userName,
               style: textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -379,7 +361,6 @@ class _MenuState extends State<Menu> {
     );
   }
 
-  // Widget hiển thị một nhóm các mục trong container
   Widget _buildGroupedMenuItems({required List<_MenuItemData> items}) {
     return Container(
       padding: const EdgeInsets.all(_spacing),
@@ -410,7 +391,6 @@ class _MenuState extends State<Menu> {
     );
   }
 
-  // Widget hiển thị một mục trong danh sách
   Widget _buildMenuItem({
     required IconData icon,
     required String title,
@@ -444,7 +424,6 @@ class _MenuState extends State<Menu> {
   }
 }
 
-// Class để lưu trữ dữ liệu của một mục trong danh sách
 class _MenuItemData {
   final IconData icon;
   final String title;

@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
   static final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'http://10.0.2.2:3000',
+      baseUrl: 'https://api.df.nguyenquangcuong.pro',
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
       headers: {
@@ -242,11 +242,9 @@ class ApiService {
     }
   }
 
-
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('auth_token');
     // return prefs.containsKey('auth_token');
   }
-
 }
