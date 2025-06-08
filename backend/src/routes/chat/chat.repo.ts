@@ -22,8 +22,19 @@ export class ChatRepository {
     private readonly messageRepository: Repository<Message>,
   ) {}
 
-  // Tạo chat mới
-  async createChat(data: CreateChatType, userId: number) {
+  // Tìm hoặc tạo chat mới
+  async findOrCreateChat(data: CreateChatType, userId: number) {
+    const existingChat = await this.chatRepository.findOne({
+      where: {
+        user_id: userId,
+        subject: data.subject,
+      },
+    });
+
+    if (existingChat) {
+      return this.getChatById(existingChat.chat_id);
+    }
+
     const chat = this.chatRepository.create({
       user_id: userId,
       subject: data.subject,

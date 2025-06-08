@@ -29,9 +29,9 @@ export class ChatController {
   @Post()
   @ApiOperation({ summary: 'User tạo chat mới' })
   @ApiResponse({ status: 201, description: 'Chat được tạo thành công' })
-  async createChat(@Body() body: CreateChatDTO, @Req() req: any) {
+  async findOrCreateChat(@Body() body: CreateChatDTO, @Req() req: any) {
     const userId = req.user.user_id;
-    return this.chatService.createChat(body, userId);
+    return this.chatService.findOrCreateChat(body, userId);
   }
 
   @Post('message')

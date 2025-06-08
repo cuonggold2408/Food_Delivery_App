@@ -17,8 +17,8 @@ export class ChatService {
   constructor(private readonly chatRepository: ChatRepository) {}
 
   // User tạo chat mới
-  async createChat(data: CreateChatType, userId: number) {
-    return this.chatRepository.createChat(data, userId);
+  async findOrCreateChat(data: CreateChatType, userId: number) {
+    return this.chatRepository.findOrCreateChat(data, userId);
   }
 
   // User gửi tin nhắn
