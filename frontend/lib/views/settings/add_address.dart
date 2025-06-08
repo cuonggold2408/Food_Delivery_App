@@ -27,8 +27,10 @@ Future<void> saveAddress({
 }) async {
   final url =
       addressId == null
-          ? Uri.parse('http://10.0.2.2:3000/user/address')
-          : Uri.parse('http://10.0.2.2:3000/user/address/$addressId');
+          ? Uri.parse('https://api.df.nguyenquangcuong.pro/user/address')
+          : Uri.parse(
+            'https://api.df.nguyenquangcuong.pro/user/address/$addressId',
+          );
   final method = addressId == null ? http.post : http.put;
 
   final headers = {

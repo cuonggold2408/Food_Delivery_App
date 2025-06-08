@@ -34,7 +34,7 @@ class _RestaurantScreenState extends State<RestaurantScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:3000/restaurants/${widget.restaurantId}'),
+        Uri.parse('https://api.df.nguyenquangcuong.pro/restaurants/${widget.restaurantId}'),
       ).timeout(const Duration(seconds: 10));
 
       print('Restaurant API Status for ID ${widget.restaurantId}: ${response.statusCode}');

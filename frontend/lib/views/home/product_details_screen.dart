@@ -21,6 +21,7 @@ class ProductDetailsScreen extends StatefulWidget {
 
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   dynamic _productData;
+  dynamic _reviewData = [];
   bool _isLoading = true;
   String? _errorMessage;
   String? _authToken;
@@ -34,7 +35,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
   Future<void> _initializeData() async {
     await _loadToken();
-    await _fetchProductData();
+    await Future.wait([_fetchProductData(), _fetchReviewData()]);
     if (_authToken != null) {
       await _fetchCartData();
     }
@@ -57,7 +58,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     try {
       final response = await http.get(
         Uri.parse(
-          'http://10.0.2.2:3000/restaurants/items/${widget.itemId}?restaurantId=${widget.restaurantId}',
+          'https://api.df.nguyenquangcuong.pro/restaurants/items/${widget.itemId}?restaurantId=${widget.restaurantId}',
         ),
       ).timeout(const Duration(seconds: 10));
 
@@ -85,6 +86,44 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     }
   }
 
+  Future<void> _fetchReviewData() async {
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
+
+  try {
+    final response = await http.get(
+      Uri.parse(
+        'https://api.df.nguyenquangcuong.pro/reviews/products/${widget.itemId}?page=1&limit=5',
+      ),
+    ).timeout(const Duration(seconds: 10));
+
+    print('Review API Status for ID ${widget.itemId}: ${response.statusCode}');
+    print('Review API Response: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final jsonData = json.decode(response.body);
+      if (jsonData['data'] == null || jsonData['data']['data'] == null) {
+        throw Exception('Phản hồi API không hợp lệ: Thiếu trường "data.data"');
+      }
+      setState(() {
+        _reviewData = jsonData['data']['data'] is List ? jsonData['data']['data'] : [];
+        _isLoading = false;
+      });
+    } else {
+      throw Exception('Không thể tải đánh giá: Mã trạng thái ${response.statusCode}');
+    }
+  } catch (e) {
+    print('Lỗi khi lấy đánh giá với ID ${widget.itemId}: $e');
+    setState(() {
+      _isLoading = false;
+      _errorMessage = 'Không thể tải đánh giá: $e';
+    });
+  }
+}
+
+
   Future<void> _fetchCartData() async {
     if (_authToken == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -104,7 +143,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:3000/cart?restaurantId=${widget.restaurantId}'),
+        Uri.parse('https://api.df.nguyenquangcuong.pro/cart?restaurantId=${widget.restaurantId}'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $_authToken',
@@ -245,7 +284,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:3000/cart'),
+        Uri.parse('https://api.df.nguyenquangcuong.pro/cart'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $_authToken',
@@ -289,6 +328,17 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       );
     }
   }
+  Widget _buildStarRating(int rating) {
+  return Row(
+    children: List.generate(5, (index) {
+      return Icon(
+        index < rating ? Icons.star : Icons.star_border,
+        color: Colors.amber,
+        size: 20,
+      );
+    }),
+  );
+}
 
   Widget _buildProductImage() {
     return Container(
@@ -419,7 +469,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => OrderScreen()),
+                    MaterialPageRoute(builder: (context) => OrderScreen(restaurantId: widget.restaurantId)),
                   );
                 },
                 child: const Text(
@@ -433,6 +483,122 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       ),
     );
   }
+  String _formatDate(String? dateStr) {
+  if (dateStr == null) return '';
+  try {
+    final date = DateTime.parse(dateStr);
+    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  } catch (e) {
+    return dateStr;
+  }
+}
+
+ Widget _buildReviewSection() {
+  if (_reviewData == null || _reviewData.isEmpty) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 16.0),
+      child: Text('Chưa có đánh giá nào.'),
+    );
+  }
+
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 16.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Đánh giá',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _reviewData.length,
+          itemBuilder: (context, index) {
+            final review = _reviewData[index];
+            if (review == null) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        child: Text(review['user']?['name']?.substring(0, 1) ?? '?'),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  review['user']?['name'] ?? 'Người dùng ẩn',
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                _buildStarRating(review['rating'] ?? 0),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              review['content'] ?? 'Không có bình luận',
+                              style: const TextStyle(fontSize: 14, color: Colors.black87),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _formatDate(review['createdAt']),
+                              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (review['medias'] != null && review['medias'].isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 100,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: review['medias'].length,
+                        itemBuilder: (context, mediaIndex) {
+                          final media = review['medias'][mediaIndex];
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                media['url'] ?? '',
+                                width: 100,
+                                height: 100,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => Container(
+                                  width: 100,
+                                  height: 100,
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.broken_image, color: Colors.grey),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                  const Divider(height: 16),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -457,7 +623,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       Text(_errorMessage!),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: _fetchProductData,
+                        onPressed: _initializeData,
                         child: const Text('Thử lại'),
                       ),
                     ],
@@ -477,6 +643,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                         _buildProductInfo(),
                         const SizedBox(height: 16),
                         _buildPriceAndAddButton(),
+                        _buildReviewSection(),
                       ],
                     ),
                   ),
@@ -833,7 +1000,6 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
         }
       }
     }
-
     return (basePrice + optionsPrice) * item.quantity;
   }
 
@@ -895,23 +1061,24 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
           runSpacing: 12.0,
           crossAxisAlignment: WrapCrossAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                item.itemData['item_image']?.isNotEmpty == true
-                    ? item.itemData['item_image']
-                    : '',
-                width: 60,
-                height: 60,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Image.asset(
-                  'assets/images/default_shop.png',
+            if (item.itemData['item_image']?.isNotEmpty == true)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  item.itemData['item_image'],
                   width: 60,
                   height: 60,
                   fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return const SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  },
                 ),
               ),
-            ),
             SizedBox(
               width: MediaQuery.of(context).size.width - 120,
               child: Column(
@@ -1032,56 +1199,86 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
               ),
             ],
           ),
+          if (cartItems.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: TextButton(
+                onPressed: () async {
+                  final success = await widget.cartManager.clearCart(widget.restaurantId);
+                  if (success) {
+                    setState(() {});
+                    widget.onQuantityChanged();
+                  }
+                },
+                child: const Text(
+                  'Xóa tất cả',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.red,
+                  ),
+                ),
+              ),
+            ),
           const SizedBox(height: 12),
           Expanded(
-            child: SingleChildScrollView(
-              child: Wrap(
-                spacing: 12.0,
-                runSpacing: 12.0,
-                children: cartItems.map((item) => _buildCartItem(item)).toList(),
+            child: cartItems.isEmpty
+                ? Center(
+                    child: Text(
+                      'Giỏ hàng đang rỗng',
+                      style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    ),
+                  )
+                : SingleChildScrollView(
+                    child: Wrap(
+                      spacing: 12.0,
+                      runSpacing: 12.0,
+                      children: cartItems.map((item) => _buildCartItem(item)).toList(),
+                    ),
+                  ),
+          ),
+          if (cartItems.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Tổng cộng',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+                  ),
+                  Text(
+                    _formatPrice(totalWithDelivery),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.red),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Tổng cộng',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  elevation: 2,
                 ),
-                Text(
-                  _formatPrice(totalWithDelivery),
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.red),
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => OrderScreen(restaurantId: widget.restaurantId)),
+                  );
+                },
+                child: Text(
+                  'Giao hàng - ${_formatPrice(totalWithDelivery)}',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                elevation: 2,
-              ),
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => OrderScreen()),
-                );
-              },
-              child: Text(
-                'Giao hàng - ${_formatPrice(totalWithDelivery)}',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

@@ -9,6 +9,9 @@ import 'package:frontend/views/home/home_screen.dart';
 
 import 'package:frontend/views/settings/location_permission_screen.dart';
 import 'package:frontend/views/search/search_screen.dart';
+import 'package:frontend/views_admin/dashboard.dart';
+import 'package:frontend/views_admin/add_food.dart';
+import 'package:frontend/views_admin/admin_screen.dart';
 
 
 void main() {
@@ -27,7 +30,8 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.white),
         useMaterial3: true,
       ),
-      initialRoute: '/location',
+      // initialRoute: '/location',
+      initialRoute: '/admin',
       routes: {
         '/login': (context) => const LoginPage(),
         '/register': (context) => const RegisterPage(),
@@ -35,6 +39,13 @@ class MyApp extends StatelessWidget {
         '/draft': (context) => const DraftPage(),
         '/search': (context) => const SearchScreen(),
         '/location': (context) => const LocationPermissionScreen(),
+        '/admin': (context) => const AdminHomeScreen(),
+        '/dashboard': (context) => const DashboardScreen(),
+        '/add_new_item':
+            (context) => AddNewItemScreen(
+              restaurantId:
+                  ModalRoute.of(context)!.settings.arguments as String,
+            ),
       },
     );
   }
