@@ -27,7 +27,6 @@ export class ChatRepository {
     const existingChat = await this.chatRepository.findOne({
       where: {
         user_id: userId,
-        subject: data.subject,
       },
     });
 
